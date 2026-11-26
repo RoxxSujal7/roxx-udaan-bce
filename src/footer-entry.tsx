@@ -46,7 +46,10 @@ if (rootEl) {
           },
           {
             title: 'Information',
-            links: [{ label: 'Registration', href: `${prefix}Templates/registration.html` }],
+            links: [
+              { label: 'Registration', href: `${prefix}Templates/registration.html` },
+              { label: 'Admin', href: `${prefix}Templates/admin.html` },
+            ],
           },
           {
             title: 'Connect',
