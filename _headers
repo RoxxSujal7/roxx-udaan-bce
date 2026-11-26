@@ -23,3 +23,10 @@
 
 /node_modules/*
   X-Robots-Tag: noindex, nofollow
+
+/Templates/admin*
+  X-Robots-Tag: noindex, nofollow
+  Cache-Control: no-store
+
+/api/admin/*
+  Cache-Control: no-store

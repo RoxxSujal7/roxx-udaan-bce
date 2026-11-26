@@ -17,11 +17,27 @@
   },
   "include": [
     "lib/utils.ts",
+    "lib/events.ts",
     "components/ui/elias-author-hero.tsx",
     "components/ui/coverflow-carousel.tsx",
     "components/ui/doodle-crew-footer.tsx",
+    "components/ui/avatar.tsx",
+    "components/ui/badge.tsx",
+    "components/ui/chart.tsx",
+    "components/ui/progress.tsx",
+    "components/ui/separator.tsx",
+    "components/ui/skeleton.tsx",
+    "components/ui/tooltip.tsx",
+    "components/ui/sheet.tsx",
+    "components/ui/app-1.tsx",
+    "components/ui/app-1-utils/sidebar.tsx",
+    "components/ui/app-1-utils/use-mobile.ts",
+    "components/ui/app-1-utils/app-1-sidebar.tsx",
+    "components/ui/app-1-utils/app-1-data.ts",
     "src/developers-entry.tsx",
     "src/events-entry.tsx",
-    "src/footer-entry.tsx"
+    "src/footer-entry.tsx",
+    "src/admin-entry.tsx",
+    "functions/api/admin/registrations.ts"
   ]
 }
