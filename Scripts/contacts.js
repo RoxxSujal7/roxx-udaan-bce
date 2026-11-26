@@ -1,51 +1,28 @@
-const windowWidth = window.innerWidth;
 const numberList = document.querySelectorAll(".number");
-const emailList = document.querySelectorAll(".mail");
-const numberListCopy = [...numberList];
-const emailListCopy = [...emailList];
 
 const contactDetails = [
-  { number: "[TODO]", email: "[TODO]" },
-  { number: "[TODO]", email: "[TODO]" },
-  { number: "[TODO]", email: "[TODO]" },
-  { number: "[TODO]", email: "[TODO]" },
+  { number: "+91 70707 57533", pending: false },
+  { number: "Number pending confirmation", pending: true },
+  { number: "+91 91997 22066", pending: false },
+  { number: "8862937210", pending: false },
 ];
 
-setInterval(() => {
-  if (window.innerWidth < 1201) {
-    numberList.forEach((element) => {
-      element.innerHTML = `<i class="fa-solid fa-phone"></i>`;
-    });
-    emailList.forEach((phone) => {
-      phone.innerHTML = `<i class="fa-solid fa-envelope"></i>`;
-    });
-  } else {
-    numberList.forEach((element, index) => {
-      element.innerHTML = contactDetails[index].number;
-    });
-    emailList.forEach((phone, index) => {
-      phone.innerHTML = contactDetails[index].email;
-    });
-  }
-  // else{
-  //     numberList.forEach((element)=>{
-  //         element.innerHTML=numberListCopy.
-  //     })
-  // }
-  //   console.log("recheck");
-}, 50);
+const renderContacts = () => {
+  const isCompact = window.innerWidth < 1201;
+  numberList.forEach((element, index) => {
+    const info = contactDetails[index];
+    if (!info) return;
+    if (info.pending) {
+      element.textContent = isCompact ? "Pending" : info.number;
+      return;
+    }
+    if (isCompact) {
+      element.innerHTML = `<i class="fa-solid fa-phone" aria-hidden="true"></i>`;
+    } else {
+      element.textContent = info.number;
+    }
+  });
+};
 
-window.addEventListener("load", () => {});
-console.log(numberList);
-
-// window.addEventListener("resize", () => {
-//   if (windowWidth < 1201) {
-//     numberList.forEach((element) => {
-//       element.innerHTML = `<i class="fa-solid fa-phone"></i>`;
-//     });
-//     emailList.forEach((phone) => {
-//       phone.innerHTML = `<i class="fa-solid fa-envelope"></i>`;
-//     });
-//   }
-//   console.log("resize");
-// });
+renderContacts();
+window.addEventListener("resize", renderContacts, { passive: true });
