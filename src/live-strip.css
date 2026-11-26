@@ -1,0 +1,15 @@
+@import "tailwindcss/theme.css";
+@import "tailwindcss/utilities.css";
+
+@source "../src/live-strip-entry.tsx";
+@source "../src/live/live-strip.tsx";
+
+#live-strip-root *,
+#live-strip-root *::before,
+#live-strip-root *::after {
+  box-sizing: border-box;
+}
+
+#live-strip-root {
+  font-family: "Montserrat", sans-serif;
+}

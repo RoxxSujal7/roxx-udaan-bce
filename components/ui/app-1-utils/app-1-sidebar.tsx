@@ -6,6 +6,7 @@ import {
   Download,
   LayoutDashboard,
   LogOut,
+  Radio,
   Trophy,
   Users,
 } from "lucide-react";
@@ -35,6 +36,7 @@ interface App1SidebarProps {
 
 const NAV_ITEMS = [
   { label: "Overview", icon: LayoutDashboard, href: "#overview" },
+  { label: "Live control", icon: Radio, href: "#live" },
   { label: "Registrations", icon: Users, href: "#registrations" },
   { label: "Events", icon: Trophy, href: "#events" },
 ] as const;

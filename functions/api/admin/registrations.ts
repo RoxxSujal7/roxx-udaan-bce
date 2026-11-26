@@ -1,11 +1,15 @@
 // Cloudflare Pages Function: GET /api/admin/registrations
 // Password-protected read-only endpoint for the UDAAN 2026 admin dashboard.
 
-export interface AdminEnv {
-  ADMIN_PASSWORD?: string;
-  SUPABASE_URL?: string;
-  SUPABASE_SECRET_KEY?: string;
-}
+import {
+  adminJsonResponse,
+  requireAdminAuth,
+  type AdminEnv,
+} from "../../../lib/server/admin-auth";
+import {
+  getSupabaseConfig,
+  supabaseFetch,
+} from "../../../lib/server/supabase-rest";
 
 interface PagesContext {
   request: Request;
@@ -15,70 +19,20 @@ interface PagesContext {
 const MAX_ROWS = 20_000;
 const PAGE_SIZE = 1_000;
 
-function jsonResponse(body: unknown, status: number): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: {
-      "Content-Type": "application/json; charset=utf-8",
-      "Cache-Control": "no-store",
-      "X-Robots-Tag": "noindex",
-    },
-  });
-}
-
-/** Constant-time compare via SHA-256 to avoid timing attacks. */
-async function constantTimeEqual(a: string, b: string): Promise<boolean> {
-  const enc = new TextEncoder();
-  const [hashA, hashB] = await Promise.all([
-    crypto.subtle.digest("SHA-256", enc.encode(a)),
-    crypto.subtle.digest("SHA-256", enc.encode(b)),
-  ]);
-  const aBytes = new Uint8Array(hashA);
-  const bBytes = new Uint8Array(hashB);
-  if (aBytes.length !== bBytes.length) return false;
-  let diff = 0;
-  for (let i = 0; i < aBytes.length; i++) {
-    diff |= aBytes[i] ^ bBytes[i];
-  }
-  return diff === 0;
-}
-
 export async function onRequestGet(context: PagesContext): Promise<Response> {
   const { request, env } = context;
 
-  // 1. Check ADMIN_PASSWORD is configured.
-  const adminPassword = env.ADMIN_PASSWORD?.trim();
-  if (!adminPassword) {
-    return jsonResponse(
-      { ok: false, error: "Admin access is not configured." },
-      503,
-    );
-  }
+  const authError = await requireAdminAuth(request, env);
+  if (authError) return authError;
 
-  // 2. Verify Authorization header in constant time.
-  const authHeader = request.headers.get("Authorization") || "";
-  const supplied = authHeader.startsWith("Bearer ")
-    ? authHeader.slice(7)
-    : "";
-
-  const valid = await constantTimeEqual(supplied, adminPassword);
-  if (!valid) {
-    // Delay ~600 ms to slow brute-force attempts.
-    await new Promise((resolve) => setTimeout(resolve, 600));
-    return jsonResponse({ ok: false, error: "Invalid password." }, 401);
-  }
-
-  // 3. Check Supabase credentials.
-  const supabaseUrl = env.SUPABASE_URL?.trim().replace(/\/+$/, "");
-  const supabaseSecretKey = env.SUPABASE_SECRET_KEY?.trim();
-  if (!supabaseUrl || !supabaseSecretKey) {
-    return jsonResponse(
+  const cfg = getSupabaseConfig(env);
+  if (!cfg) {
+    return adminJsonResponse(
       { ok: false, error: "Database is not configured on the server." },
       503,
     );
   }
 
-  // 4. Paginate through Supabase until all rows fetched (capped at MAX_ROWS).
   const columns = [
     "id",
     "submission_id",
@@ -104,17 +58,13 @@ export async function onRequestGet(context: PagesContext): Promise<Response> {
 
   try {
     while (allRows.length < MAX_ROWS) {
-      const url = `${supabaseUrl}/rest/v1/event_registrations?select=${columns}&order=created_at.desc&limit=${PAGE_SIZE}&offset=${offset}`;
-      const sbResponse = await fetch(url, {
-        headers: {
-          apikey: supabaseSecretKey,
-          Authorization: `Bearer ${supabaseSecretKey}`,
-        },
-      });
+      const sbResponse = await supabaseFetch(
+        cfg,
+        `event_registrations?select=${columns}&order=created_at.desc&limit=${PAGE_SIZE}&offset=${offset}`,
+      );
 
       if (!sbResponse.ok) {
-        // Do not echo upstream error body — it may contain internal detail.
-        return jsonResponse(
+        return adminJsonResponse(
           { ok: false, error: "Failed to fetch registrations from database." },
           502,
         );
@@ -123,17 +73,17 @@ export async function onRequestGet(context: PagesContext): Promise<Response> {
       const page = (await sbResponse.json()) as unknown[];
       allRows.push(...page);
 
-      if (page.length < PAGE_SIZE) break; // Last page reached.
+      if (page.length < PAGE_SIZE) break;
       offset += PAGE_SIZE;
     }
   } catch {
-    return jsonResponse(
+    return adminJsonResponse(
       { ok: false, error: "Database request failed. Please try again." },
       502,
     );
   }
 
-  return jsonResponse(
+  return adminJsonResponse(
     {
       ok: true,
       registrations: allRows,
@@ -144,10 +94,9 @@ export async function onRequestGet(context: PagesContext): Promise<Response> {
   );
 }
 
-// Strictly read-only: reject all other methods.
 export async function onRequest(context: PagesContext): Promise<Response> {
   if (context.request.method === "GET") {
     return onRequestGet(context);
   }
-  return jsonResponse({ ok: false, error: "Method not allowed." }, 405);
+  return adminJsonResponse({ ok: false, error: "Method not allowed." }, 405);
 }

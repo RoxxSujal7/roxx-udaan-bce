@@ -1,0 +1,22 @@
+@import "tailwindcss/theme.css";
+@import "tailwindcss/utilities.css";
+
+@source "../src/live-alerts-entry.tsx";
+@source "../src/live/live-alerts.tsx";
+
+#udaan-alerts-root *,
+#udaan-alerts-root *::before,
+#udaan-alerts-root *::after {
+  box-sizing: border-box;
+}
+
+#udaan-alerts-root {
+  font-family: "Montserrat", sans-serif;
+}
+
+#udaan-alerts-root button {
+  background: transparent;
+  border: 0;
+  color: inherit;
+  font-family: inherit;
+}

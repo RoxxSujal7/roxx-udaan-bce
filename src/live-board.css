@@ -1,0 +1,58 @@
+@import "tailwindcss/theme.css";
+@import "tailwindcss/utilities.css";
+
+@source "../src/live-entry.tsx";
+@source "../src/live/live-board.tsx";
+@source "../components/ui/changelog-timeline.tsx";
+
+/* Scoped reset for ChangelogTimeline on a no-Preflight page */
+@layer base {
+  [data-slot="changelog-timeline"],
+  [data-slot="changelog-timeline"] *,
+  [data-slot="changelog-timeline"] *::before,
+  [data-slot="changelog-timeline"] *::after {
+    box-sizing: border-box;
+    border: 0 solid;
+    margin: 0;
+    padding: 0;
+  }
+  [data-slot="changelog-timeline"] button {
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+  }
+  [data-slot="changelog-timeline"] ol {
+    list-style: none;
+  }
+  [data-slot="changelog-timeline"] a {
+    color: inherit;
+  }
+
+  #live-board-root *,
+  #live-board-root *::before,
+  #live-board-root *::after {
+    box-sizing: border-box;
+  }
+  #live-board-root button {
+    font-family: inherit;
+  }
+}
+
+/* Scoped UDAAN dark tokens for Live board & ChangelogTimeline */
+#live-board-root {
+  --color-background: #0d0d0d;
+  --color-foreground: #f4f1ea;
+  --color-card: #141414;
+  --color-card-foreground: #f4f1ea;
+  --color-muted: #1e1e1e;
+  --color-muted-foreground: #a1a1aa;
+  --color-border: rgba(255, 255, 255, 0.12);
+  --color-primary: #ff6b2b;
+  --color-ring: #ff6b2b;
+  --color-chart-1: #ff6b2b; /* UDAAN orange (result) */
+  --color-chart-2: #ef4444; /* Live red (live) */
+  --color-chart-3: #3b82f6; /* Info blue (notice) */
+  font-family: "Montserrat", sans-serif;
+  color: #f4f1ea;
+}

@@ -260,6 +260,7 @@ function AdminApp() {
       {password ? (
         <div className="h-screen w-full overflow-auto">
           <App1
+            adminPassword={password}
             registrations={registrations}
             fetchedAt={fetchedAt}
             onRefresh={handleRefresh}

@@ -43,6 +43,7 @@ import {
   SidebarTrigger,
 } from "@/components/ui/app-1-utils/sidebar";
 import { App1Sidebar } from "@/components/ui/app-1-utils/app-1-sidebar";
+import { LiveControl } from "@/components/ui/app-1-utils/live-control";
 import {
   app1ChartConfig,
   buildDailyChart,
@@ -56,6 +57,7 @@ import { getEventGroup } from "@/lib/events";
 // ─── Props ─────────────────────────────────────────────────────────────────
 
 interface App1Props {
+  adminPassword: string;
   registrations: Registration[];
   fetchedAt: string;
   onRefresh: () => void;
@@ -99,6 +101,7 @@ function csvEscape(value: unknown): string {
 // ─── Main Component ────────────────────────────────────────────────────────
 
 export function App1({
+  adminPassword,
   registrations,
   fetchedAt,
   onRefresh,
@@ -741,6 +744,9 @@ export function App1({
               )}
             </CardContent>
           </Card>
+
+          {/* ── Live Control (Matches + Announcements) ── */}
+          <LiveControl adminPassword={adminPassword} />
         </main>
       </SidebarInset>
 
