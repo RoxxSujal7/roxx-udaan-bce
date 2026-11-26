@@ -115,12 +115,25 @@
   border-radius: 34px;
 }
 
+.contactImg.contactPhoto {
+  mix-blend-mode: normal;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  object-position: center 20%;
+  display: block;
+}
+
 .contactImgCont {
   mix-blend-mode: overlay;
   background: transparent;
   opacity: 0.9;
   border-radius: 34px;
   width: 78%;
+}
+
+.contactImgCont:has(.contactPhoto) {
+  mix-blend-mode: normal;
+  opacity: 1;
 }
 
 .contact-details {

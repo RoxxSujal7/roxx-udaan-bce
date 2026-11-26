@@ -2,9 +2,9 @@ const numberList = document.querySelectorAll(".number");
 
 const contactDetails = [
   { number: "+91 70707 57533", pending: false },
-  { number: "Number pending confirmation", pending: true },
+  { number: "+91 70917 99059", pending: false },
   { number: "+91 91997 22066", pending: false },
-  { number: "8862937210", pending: false },
+  { number: "+91 88629 37210", pending: false },
 ];
 
 const renderContacts = () => {
