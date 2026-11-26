@@ -30,7 +30,7 @@ const releaseVideo = () => {
   }
 };
 
-window.addEventListener("load", () => {
+const startIntro = () => {
   const body = document.body;
   const loader = document.querySelector(".loader");
   const light = document.getElementsByClassName("light");
@@ -184,8 +184,13 @@ window.addEventListener("load", () => {
   }
 
   // Never trap the user if video fails to load or autoplay is blocked
-  if (video) {
-    video.addEventListener("error", () => dismissLoader(true), { once: true });
+  const tryPlayVideo = () => {
+    if (!video || dismissed) return;
+    video.muted = true;
+    video.defaultMuted = true;
+    video.playsInline = true;
+    video.setAttribute("muted", "");
+    video.setAttribute("playsinline", "");
     if (typeof video.play === "function") {
       const playPromise = video.play();
       if (playPromise && typeof playPromise.catch === "function") {
@@ -194,10 +199,22 @@ window.addEventListener("load", () => {
         });
       }
     }
+  };
+
+  if (video) {
+    video.addEventListener("error", () => dismissLoader(true), { once: true });
+    video.addEventListener("canplay", tryPlayVideo, { once: true });
+    tryPlayVideo();
   }
   setTimeout(() => {
     if (!dismissed && (!video || video.readyState < 2)) {
       dismissLoader(false);
     }
   }, 4500);
-});
+};
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", startIntro, { once: true });
+} else {
+  startIntro();
+}

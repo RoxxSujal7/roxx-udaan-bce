@@ -196,7 +196,7 @@ Never commit `.dev.vars`, `.env` files, or secret keys to Git.
 
 ## Credits & Attribution
 
-- **Developers page footer:** `Original design by RoxxSujal7.` (on `Templates/developers.html`).
+- **Developers page footer:** `Original design by Roxx` (on `Templates/developers.html`).
 - **UDAAN 2026 integration & maintenance:** `RoxxSujal7`.
 
 ---

@@ -596,12 +596,16 @@ const InkCursor = () => {
 
     const handleLeave = () => visible.set(0)
 
+    hero.addEventListener('pointerdown', handleMove, { passive: true })
     hero.addEventListener('pointermove', handleMove, { passive: true })
     hero.addEventListener('pointerleave', handleLeave)
+    hero.addEventListener('pointercancel', handleLeave)
 
     return () => {
+      hero.removeEventListener('pointerdown', handleMove)
       hero.removeEventListener('pointermove', handleMove)
       hero.removeEventListener('pointerleave', handleLeave)
+      hero.removeEventListener('pointercancel', handleLeave)
     }
   }, [x, y, visible])
 
@@ -1637,14 +1641,14 @@ const HeroSection = () => {
 
   // Vars
   const { delays, spotlight } = MOTION
-  const depthActive = finePointer && !reduceMotion
+  const depthActive = !reduceMotion
   const spotActive = depthActive && composition && spotReady
 
   // The entrance waits for the splash to open, or plays at once when the visitor asks for reduced motion
   const started = opened || prefersReduced
 
-  // The custom cursor replaces the system one only with a mouse, and never under reduced motion
-  const cursorActive = finePointer && !prefersReduced
+  // The custom orange ink circle works for mouse and touch, while cursor: none stays fine-pointer only
+  const cursorActive = !prefersReduced
 
   // CSS variables the layer masks read; Motion writes them without re-rendering, though its types omit them
   const spotStyle = { '--ea-spot-x': spotXVar, '--ea-spot-y': spotYVar, '--ea-spot-r': spotRadiusVar } as MotionStyle
@@ -1723,7 +1727,8 @@ const HeroSection = () => {
       ref={sectionRef}
       id='top'
       aria-label={`${NAME.first} ${NAME.last}`}
-      className={cn('ea-hero bg-ea-page text-ea-ink font-ea-sans relative', cursorActive && 'ea-has-cursor')}
+      className={cn('ea-hero bg-ea-page text-ea-ink font-ea-sans relative', cursorActive && finePointer && 'ea-has-cursor')}
+      onPointerDown={handlePointerMove}
       onPointerMove={handlePointerMove}
       onPointerLeave={handlePointerLeave}
     >
