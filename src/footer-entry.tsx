@@ -3,6 +3,9 @@ import { createRoot } from 'react-dom/client';
 import DoodleCrewFooter from '../components/ui/doodle-crew-footer';
 
 const rootEl = document.getElementById('udaan-footer-root');
+const inTemplates =
+  typeof window !== 'undefined' && window.location.pathname.includes('/Templates/');
+const prefix = inTemplates ? '../' : './';
 
 if (rootEl) {
   createRoot(rootEl).render(
@@ -19,7 +22,7 @@ if (rootEl) {
       <DoodleCrewFooter
         wordmark="UDAAN"
         brand="UDAAN 2026"
-        logo={{ src: './Assets/Logo.png', alt: 'UDAAN 2026 logo' }}
+        logo={{ src: `${prefix}Assets/Logo.png`, alt: 'UDAAN 2026 logo' }}
         blurb="Annual sports fest of Bhagalpur College of Engineering (BCE), Bhagalpur. 27–30 November 2026."
         tagline="Journey from efforts to excellence."
         preset="night"
@@ -27,23 +30,23 @@ if (rootEl) {
           {
             title: 'UDAAN',
             links: [
-              { label: 'Home', href: '#' },
-              { label: 'About Us', href: '#about-sec' },
-              { label: "Principal's Message", href: 'Templates/director.html' },
-              { label: 'Developers', href: 'Templates/developers.html' },
+              { label: 'Home', href: `${prefix}index.html` },
+              { label: 'About Us', href: inTemplates ? `${prefix}index.html#about-sec` : '#about-sec' },
+              { label: "Principal's Message", href: `${prefix}Templates/director.html` },
+              { label: 'Developers', href: `${prefix}Templates/developers.html` },
             ],
           },
           {
             title: 'Events',
             links: [
-              { label: 'Events', href: '#eventsHere' },
-              { label: 'IGNITION', href: 'Templates/ignition.html' },
-              { label: 'Gallery', href: 'Templates/gallery.html' },
+              { label: 'Events', href: inTemplates ? `${prefix}index.html#eventsHere` : '#eventsHere' },
+              { label: 'IGNITION', href: `${prefix}Templates/ignition.html` },
+              { label: 'Gallery', href: `${prefix}Templates/gallery.html` },
             ],
           },
           {
             title: 'Information',
-            links: [{ label: 'Registration', href: 'Templates/registration.html' }],
+            links: [{ label: 'Registration', href: `${prefix}Templates/registration.html` }],
           },
           {
             title: 'Connect',
@@ -54,8 +57,8 @@ if (rootEl) {
           },
         ]}
         actions={[
-          { label: 'Register Now', href: 'Templates/registration.html', icon: 'bolt', variant: 'solid' },
-          { label: 'Explore Events', href: '#eventsHere', icon: 'star', variant: 'outline' },
+          { label: 'Register Now', href: `${prefix}Templates/registration.html`, icon: 'bolt', variant: 'solid' },
+          { label: 'Explore Events', href: inTemplates ? `${prefix}index.html#eventsHere` : '#eventsHere', icon: 'star', variant: 'outline' },
         ]}
         copyright="© 2026 UDAAN Sports Club, Bhagalpur College of Engineering."
         legal={[]}

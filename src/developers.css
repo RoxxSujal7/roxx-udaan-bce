@@ -26,6 +26,25 @@
   }
 }
 
+@media (max-width: 400px) {
+  #elias-root .ea-wrap {
+    padding-inline: 12px;
+  }
+
+  #elias-root .ea-nav {
+    column-gap: 6px;
+  }
+
+  #elias-root .ea-nav-link {
+    font-size: 9.5px;
+    letter-spacing: 0.04em;
+  }
+
+  #elias-root .ea-nav-cta {
+    justify-self: end;
+  }
+}
+
 @media (min-width: 640px) {
   #elias-root .ea-nav {
     --ea-nav-gap: clamp(12px, 1.5vw, 24px);

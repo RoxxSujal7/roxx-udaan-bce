@@ -48,7 +48,10 @@ This audit inspected the static HTML pages, CSS/JS assets, React/TypeScript isla
 
 | Severity | Finding | Location | Status |
 |---|---|---|---|
-| **High** | Live Supabase persistence not yet configured/verified (`.dev.vars` missing, `wrangler` not installed, migration not yet applied) | `functions/api/registrations.ts`, `supabase/migrations/001_create_event_registrations.sql` | **Pending Gate 3** |
+| **High** | Live Supabase persistence not yet verified locally via `wrangler` (table created with `events jsonb NOT NULL`; migration updated to match) | `functions/api/registrations.ts`, `supabase/migrations/001_create_event_registrations.sql` | **Migration aligned; live Wrangler test pending `.dev.vars`** |
+| **High** | `DoodleCrewFooter` was only mounted on `index.html`, missing from the 5 inner `Templates/*.html` pages | `src/footer-entry.tsx`, `Templates/*.html` | **Fixed** (mounted on all 6 pages with dynamic `../` / `./` path prefix) |
+| **High** | Intro loader video replayed on inner pages (`cookie.trim()` bug + `readyState === 4` trap + missing `path=/`) | `Scripts/loader.js`, `Scripts/loaderIndex.js` | **Fixed** (`sessionStorage` + `prefers-reduced-motion` + video error/timeout fallback) |
+| **Medium** | Developers page `320px` mobile navbar clipped `DEVELOPERS` and the right edge of the orange `(↗)` CTA circle | `src/developers.css`, `Scripts/developers-hero.bundle.css` | **Fixed** (verified across 10 viewports `320×568`–`1440×900`) |
 | **High** | `framer-motion` was imported in `multistep-form.tsx` without being listed in `package.json` | `components/ui/multistep-form.tsx:4` | **Fixed** (switched to `motion/react`) |
 | **Medium** | Mobile horizontal overflow (`+2px`) on `index.html` at `390×844` and `360×800` due to `transform: translate(0.6rem, 0.8rem)` on `.right` | `Styles/responsive.css` | **Fixed** (changed to `translateY(0.8rem)`) |
 | **Medium** | Production-domain SEO items remain `[TODO]` until final domain is confirmed (`canonical`, `og:url`, absolute `og:image`, `sitemap.xml`) | All 6 HTML pages, `robots.txt` | **Pending domain** |

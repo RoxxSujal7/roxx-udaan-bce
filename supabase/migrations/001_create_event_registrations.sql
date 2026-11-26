@@ -13,7 +13,7 @@ create table if not exists public.event_registrations (
   roll_number text,
   department text,
   academic_year text,
-  events text[] not null check (cardinality(events) >= 1),
+  events jsonb not null check (jsonb_typeof(events) = 'array' and jsonb_array_length(events) >= 1),
   participation_type text not null default 'individual' check (participation_type in ('individual', 'team')),
   team_name text,
   team_members text,

@@ -34,7 +34,16 @@
   --color-ring: rgba(249, 115, 22, 0.5);
 }
 
-/* Ensure registration container is visible and properly sized */
+/* Ensure registration container is visible and footer stacks below */
+body {
+  flex-direction: column !important;
+  align-items: stretch !important;
+}
+
+#udaan-footer-root {
+  width: 100%;
+}
+
 #reg-cont {
   display: block !important;
   width: min(94vw, 760px) !important;

@@ -1,24 +1,50 @@
-let body = document.querySelector("body");
+const INTRO_KEY = "udaan_intro_seen";
 
-const getCookie = (cookieName) => {
-  let name = cookieName + "=";
-  let decodedCookie = decodeURIComponent(document.cookie);
-  let cookieArray = decodedCookie.split(";");
-  for (let i = 0; i < cookieArray.length; i++) {
-    let cookie = cookieArray[i];
-    cookie.trim();
-    if (cookie.indexOf(name) === 0) {
-      return cookie.substring(name.length, cookie.length);
+const getIntroSeen = () => {
+  try {
+    if (window.sessionStorage && sessionStorage.getItem(INTRO_KEY) === "1") {
+      return true;
     }
+  } catch {}
+  return document.cookie
+    .split(";")
+    .some((c) => c.trim() === "showContinue=false");
+};
+
+const markIntroSeen = () => {
+  try {
+    if (window.sessionStorage) sessionStorage.setItem(INTRO_KEY, "1");
+  } catch {}
+  document.cookie = "showContinue=false; path=/; SameSite=Lax";
+};
+
+const releaseVideo = () => {
+  const video = document.getElementById("video");
+  if (video) {
+    try {
+      video.pause();
+      video.removeAttribute("src");
+      video.querySelectorAll("source").forEach((s) => s.remove());
+      video.load();
+    } catch {}
   }
-  return "";
 };
 
 window.addEventListener("load", () => {
+  const body = document.body;
   const loader = document.querySelector(".loader");
   const light = document.getElementsByClassName("light");
+  const video = document.getElementById("video");
+  const hide = document.querySelector(".hide");
 
-  loader.addEventListener("click", () => {
+  if (!loader) return;
+
+  let dismissed = false;
+  const dismissLoader = (instant) => {
+    if (dismissed) return;
+    dismissed = true;
+    markIntroSeen();
+
     const fred = document.getElementsByClassName("fall-red");
     const fblue = document.getElementsByClassName("fall-blue");
     const fyellow = document.getElementsByClassName("fall-yellow");
@@ -27,7 +53,7 @@ window.addEventListener("load", () => {
     const bred = document.querySelector(".bg-red");
     const bblue = document.querySelector(".bg-blue");
     const byellow = document.querySelector(".bg-yellow");
-    let loop2 = [bred, bblue, byellow];
+    const loop2 = [bred, bblue, byellow];
 
     const appear = [
       document.querySelector("#bosm"),
@@ -35,101 +61,143 @@ window.addEventListener("load", () => {
     ];
 
     document.body.scrollTop = document.documentElement.scrollTop = 0;
-    loader.style.animation = "fade-out 1s ease-out";
-    body.style.overflowY = "scroll";
+    if (body) body.style.overflowY = "scroll";
 
-    setTimeout(() => {
+    if (instant) {
       loader.style.display = "none";
-    }, 1000);
+      releaseVideo();
+    } else {
+      loader.style.animation = "fade-out 1s ease-out";
+      setTimeout(() => {
+        loader.style.display = "none";
+        releaseVideo();
+      }, 1000);
+    }
 
     setTimeout(() => {
-      flicker();
-    }, 1000);
+      if (typeof flicker === "function") flicker();
+    }, instant ? 50 : 1000);
 
-    light[0].style.animation = "flicker 2s 1s";
-    light[1].style.animation = "flicker 2s 2.3s";
-    light[2].style.animation = "flicker 2s 1.5s";
+    if (light.length >= 3) {
+      light[0].style.animation = "flicker 2s 1s";
+      light[1].style.animation = "flicker 2s 2.3s";
+      light[2].style.animation = "flicker 2s 1.5s";
+    }
 
-    bred.style.animation = "flicker 2s 1s";
-    bblue.style.animation = "flicker 2s 2.3s";
-    byellow.style.animation = "flicker 2s 1.5s";
-
-    for (let i = 0; i < 3; i++) loop2[i].style.opacity = 0;
-    for (let i = 0; i < 2; i++) appear[i].style.opacity = 0;
+    if (bred) bred.style.animation = "flicker 2s 1s";
+    if (bblue) bblue.style.animation = "flicker 2s 2.3s";
+    if (byellow) byellow.style.animation = "flicker 2s 1.5s";
 
     for (let i = 0; i < 3; i++) {
-      light[i].style.opacity = 0;
-      fred[i].style.animation = "fall-red 52s linear 2.4s infinite";
-      fblue[i].style.animation = "fall-blue 52s linear 2.4s infinite";
-      fyellow[i].style.animation = "fall-yellow 52s linear 2.4s infinite";
+      if (loop2[i]) loop2[i].style.opacity = 0;
+    }
+    for (let i = 0; i < 2; i++) {
+      if (appear[i]) appear[i].style.opacity = 0;
+    }
+
+    for (let i = 0; i < 3; i++) {
+      if (light[i]) light[i].style.opacity = 0;
+      if (fred[i]) fred[i].style.animation = "fall-red 52s linear 2.4s infinite";
+      if (fblue[i]) fblue[i].style.animation = "fall-blue 52s linear 2.4s infinite";
+      if (fyellow[i]) fyellow[i].style.animation = "fall-yellow 52s linear 2.4s infinite";
     }
 
     setTimeout(() => {
-      for (let i = 0; i < 3; i++) loop1[i][0].style.opacity = 1;
-    }, 3000);
+      for (let i = 0; i < 3; i++) if (loop1[i]?.[0]) loop1[i][0].style.opacity = 1;
+    }, instant ? 200 : 3000);
 
     setTimeout(() => {
-      for (let i = 0; i < 3; i++) loop1[i][1].style.opacity = 1;
-    }, 3500);
+      for (let i = 0; i < 3; i++) if (loop1[i]?.[1]) loop1[i][1].style.opacity = 1;
+    }, instant ? 350 : 3500);
 
     setTimeout(() => {
-      for (let i = 0; i < 3; i++) loop1[i][2].style.opacity = 1;
-    }, 3300);
+      for (let i = 0; i < 3; i++) if (loop1[i]?.[2]) loop1[i][2].style.opacity = 1;
+    }, instant ? 300 : 3300);
 
     setTimeout(() => {
-      document.getElementById("lightRed").style.opacity = 1;
-      bred.style.opacity = 1;
-    }, 3000);
+      const lr = document.getElementById("lightRed");
+      if (lr) lr.style.opacity = 1;
+      if (bred) bred.style.opacity = 1;
+    }, instant ? 200 : 3000);
 
     setTimeout(() => {
-      document.getElementById("lightBlue").style.opacity = 1;
-      bblue.style.opacity = 1;
-    }, 3500);
+      const lb = document.getElementById("lightBlue");
+      if (lb) lb.style.opacity = 1;
+      if (bblue) bblue.style.opacity = 1;
+    }, instant ? 350 : 3500);
 
     setTimeout(() => {
-      document.getElementById("lightYellow").style.opacity = 1;
-      byellow.style.opacity = 1;
-    }, 3300);
+      const ly = document.getElementById("lightYellow");
+      if (ly) ly.style.opacity = 1;
+      if (byellow) byellow.style.opacity = 1;
+    }, instant ? 300 : 3300);
 
     setTimeout(() => {
-      for (let i = 0; i < 2; i++) appear[i].style.animation = "fade-in 1.7s";
-    }, 3000);
-
-    setTimeout(() => {
-      for (let i = 0; i < 2; i++) appear[i].style.opacity = 1;
-    }, 4700);
-
-    if (screen.width < 801) {
-      for (let i = 0; i < 3; i++) {
-        fred[i].style.animation = "fall-red-2 52s linear 2.4s infinite";
-        fblue[i].style.animation = "fall-blue-2 52s linear 2.4s infinite";
-        fyellow[i].style.animation = "fall-yellow-2 52s linear 2.4s infinite";
+      for (let i = 0; i < 2; i++) {
+        if (appear[i]) appear[i].style.animation = "fade-in 1.7s";
       }
+    }, instant ? 200 : 3000);
 
-      for (let i = 0; i < 3; i++)
-        for (let j = 0; j < 3; j++)
-          loop1[i][j].setAttribute("src", "Assets/smol.png");
+    setTimeout(() => {
+      for (let i = 0; i < 2; i++) {
+        if (appear[i]) appear[i].style.opacity = 1;
+      }
+    }, instant ? 600 : 4700);
+
+    if (window.screen && window.screen.width < 801) {
+      for (let i = 0; i < 3; i++) {
+        if (fred[i]) fred[i].style.animation = "fall-red-2 52s linear 2.4s infinite";
+        if (fblue[i]) fblue[i].style.animation = "fall-blue-2 52s linear 2.4s infinite";
+        if (fyellow[i]) fyellow[i].style.animation = "fall-yellow-2 52s linear 2.4s infinite";
+      }
+      for (let i = 0; i < 3; i++) {
+        for (let j = 0; j < 3; j++) {
+          if (loop1[i]?.[j]) loop1[i][j].setAttribute("src", "Assets/smol.png");
+        }
+      }
     } else {
       for (let i = 0; i < 3; i++) {
-        fred[i].setAttribute("src", "Assets/fall-red-big.png");
-        fblue[i].setAttribute("src", "Assets/fall-blue-big.png");
-        fyellow[i].setAttribute("src", "Assets/fall-yellow-big.png");
+        if (fred[i]) fred[i].setAttribute("src", "Assets/fall-red-big.png");
+        if (fblue[i]) fblue[i].setAttribute("src", "Assets/fall-blue-big.png");
+        if (fyellow[i]) fyellow[i].setAttribute("src", "Assets/fall-yellow-big.png");
       }
     }
-  });
+  };
 
-  if (document.getElementById("video").readyState === 4) {
-    document.body.scrollTop = document.documentElement.scrollTop = 0;
-    const hide = document.querySelector(".hide");
+  const prefersReducedMotion =
+    typeof window.matchMedia === "function" &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  if (getIntroSeen() || prefersReducedMotion) {
+    dismissLoader(true);
+    return;
+  }
+
+  loader.addEventListener("click", () => dismissLoader(false), { once: true });
+
+  document.body.scrollTop = document.documentElement.scrollTop = 0;
+  if (hide) {
     hide.style.animation = "appear 3s";
+    setTimeout(() => {
+      hide.style.opacity = 0.9;
+    }, 2901);
+  }
 
-    if (getCookie("showContinue") !== "false") {
-      setTimeout(() => {
-        hide.style.opacity = 0.9;
-      }, 2901);
-      document.cookie = "showContinue=false";
-    } else {
-      loader.click();
+  // Never trap the user if video fails to load or autoplay is blocked
+  if (video) {
+    video.addEventListener("error", () => dismissLoader(true), { once: true });
+    if (typeof video.play === "function") {
+      const playPromise = video.play();
+      if (playPromise && typeof playPromise.catch === "function") {
+        playPromise.catch(() => {
+          if (hide) hide.style.opacity = 0.9;
+        });
+      }
     }
   }
+  setTimeout(() => {
+    if (!dismissed && (!video || video.readyState < 2)) {
+      dismissLoader(false);
+    }
+  }, 4500);
 });
