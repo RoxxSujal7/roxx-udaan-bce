@@ -34,31 +34,17 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
-export const UDAAN_SPORTS_AND_CULTURAL_EVENTS = [
-  "Cricket",
-  "Football",
-  "Badminton",
-  "Table Tennis",
-  "Volleyball",
-  "Athletics",
-  "Board Games",
-  "Javelin",
-  "Kabaddi",
-  "Tug of War",
-  "Literary",
-  "Cultural",
-] as const;
+import {
+  ALL_ALLOWED_EVENTS,
+  IGNITION_ESPORTS_EVENTS,
+  UDAAN_SPORTS_AND_CULTURAL_EVENTS,
+} from "@/lib/events";
 
-export const IGNITION_ESPORTS_EVENTS = [
-  "COD Mobile",
-  "Valorant",
-  "Clash Royale",
-] as const;
-
-export const ALL_ALLOWED_EVENTS = [
-  ...UDAAN_SPORTS_AND_CULTURAL_EVENTS,
-  ...IGNITION_ESPORTS_EVENTS,
-] as const;
+export {
+  ALL_ALLOWED_EVENTS,
+  IGNITION_ESPORTS_EVENTS,
+  UDAAN_SPORTS_AND_CULTURAL_EVENTS,
+};
 
 const TEAM_APPLICABLE_EVENTS = new Set<string>([
   "Cricket",
@@ -68,9 +54,12 @@ const TEAM_APPLICABLE_EVENTS = new Set<string>([
   "Tug of War",
   "Badminton",
   "Table Tennis",
-  "COD Mobile",
+  "BGMI",
+  "Free Fire",
   "Valorant",
 ]);
+
+const TEAM_REQUIRED_EVENTS = new Set<string>(IGNITION_ESPORTS_EVENTS);
 
 const steps = [
   { id: "participant", title: "Participant" },
@@ -141,6 +130,32 @@ function generateSubmissionId(): string {
   });
 }
 
+function getInitialQuerySelection(): {
+  events: string[];
+  participationType: "individual" | "team";
+} {
+  if (typeof window === "undefined") {
+    return { events: [], participationType: "individual" };
+  }
+  try {
+    const param = new URLSearchParams(window.location.search).get("event");
+    if (
+      param &&
+      (ALL_ALLOWED_EVENTS as readonly string[]).includes(param)
+    ) {
+      return {
+        events: [param],
+        participationType: TEAM_REQUIRED_EVENTS.has(param)
+          ? "team"
+          : "individual",
+      };
+    }
+  } catch {
+    /* ignore */
+  }
+  return { events: [], participationType: "individual" };
+}
+
 const initialFormData: RegistrationFormData = {
   fullName: "",
   email: "",
@@ -150,8 +165,7 @@ const initialFormData: RegistrationFormData = {
   rollNumber: "",
   department: "",
   academicYear: "",
-  events: [],
-  participationType: "individual",
+  ...getInitialQuerySelection(),
   teamName: "",
   teamMembers: "",
   notes: "",
@@ -177,6 +191,9 @@ const OnboardingForm = () => {
   const hasTeamApplicableSelection = formData.events.some((ev) =>
     TEAM_APPLICABLE_EVENTS.has(ev),
   );
+  const hasTeamRequiredSelection = formData.events.some((ev) =>
+    TEAM_REQUIRED_EVENTS.has(ev),
+  );
 
   const updateFormData = <K extends keyof RegistrationFormData>(
     field: K,
@@ -198,10 +215,17 @@ const OnboardingForm = () => {
       const nextHasTeam = nextEvents.some((ev) =>
         TEAM_APPLICABLE_EVENTS.has(ev),
       );
+      const nextRequiresTeam = nextEvents.some((ev) =>
+        TEAM_REQUIRED_EVENTS.has(ev),
+      );
       return {
         ...prev,
         events: nextEvents,
-        participationType: nextHasTeam ? prev.participationType : "individual",
+        participationType: nextRequiresTeam
+          ? "team"
+          : nextHasTeam
+            ? prev.participationType
+            : "individual",
       };
     });
   };
@@ -818,9 +842,11 @@ const OnboardingForm = () => {
                     <CardHeader>
                       <CardTitle>Participation &amp; Team</CardTitle>
                       <CardDescription>
-                        {hasTeamApplicableSelection
-                          ? "Specify whether you are registering individually or as part of a team"
-                          : "Your selected events are individual entries"}
+                        {hasTeamRequiredSelection
+                          ? "Team entry is required for IGNITION esports events"
+                          : hasTeamApplicableSelection
+                            ? "Specify whether you are registering individually or as part of a team"
+                            : "Your selected events are individual entries"}
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
@@ -830,29 +856,38 @@ const OnboardingForm = () => {
                             <Label>Participation Mode</Label>
                             <RadioGroup
                               value={formData.participationType}
-                              onValueChange={(value) =>
+                              onValueChange={(value) => {
+                                if (hasTeamRequiredSelection && value !== "team") {
+                                  return;
+                                }
                                 updateFormData(
                                   "participationType",
                                   value === "team" ? "team" : "individual",
-                                )
-                              }
+                                );
+                              }}
                               className="space-y-2"
                             >
                               {[
                                 {
                                   value: "individual",
                                   label: "Individual Participant",
+                                  disabled: hasTeamRequiredSelection,
                                 },
                                 {
                                   value: "team",
                                   label: "Team Entry",
+                                  disabled: false,
                                 },
                               ].map((opt, index) => (
                                 <motion.div
                                   key={opt.value}
-                                  className="flex items-center space-x-2 rounded-md border p-3 cursor-pointer hover:bg-accent transition-colors"
-                                  whileHover={{ scale: 1.02 }}
-                                  whileTap={{ scale: 0.98 }}
+                                  className={`flex items-center space-x-2 rounded-md border p-3 transition-colors ${
+                                    opt.disabled
+                                      ? "opacity-50 cursor-not-allowed"
+                                      : "cursor-pointer hover:bg-accent"
+                                  }`}
+                                  whileHover={opt.disabled ? undefined : { scale: 1.02 }}
+                                  whileTap={opt.disabled ? undefined : { scale: 0.98 }}
                                   transition={{ duration: 0.2 }}
                                   initial={{ opacity: 0, x: -10 }}
                                   animate={{
@@ -867,10 +902,15 @@ const OnboardingForm = () => {
                                   <RadioGroupItem
                                     value={opt.value}
                                     id={`participation-${opt.value}`}
+                                    disabled={opt.disabled}
                                   />
                                   <Label
                                     htmlFor={`participation-${opt.value}`}
-                                    className="cursor-pointer w-full"
+                                    className={
+                                      opt.disabled
+                                        ? "cursor-not-allowed w-full"
+                                        : "cursor-pointer w-full"
+                                    }
                                   >
                                     {opt.label}
                                   </Label>

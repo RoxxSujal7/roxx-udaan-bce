@@ -133,3 +133,4 @@ npx wrangler pages dev .
 - Never assume live Supabase persistence is complete until a real database write is verified in Gate 3.
 - Never expose `.dev.vars`, `SUPABASE_SECRET_KEY`, or personal registration data in code, logs, or commits.
 - Respect approval gates before production deployment or destructive Git actions.
+- When resuming `live-updates`: change the IGNITION events to `BGMI` / `Free Fire` / `Valorant` there too.

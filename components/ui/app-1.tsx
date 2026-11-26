@@ -480,7 +480,11 @@ export function App1({
                       </h3>
                       <Badge
                         variant={
-                          ev.group === "IGNITION" ? "secondary" : "default"
+                          ev.group === "Legacy"
+                            ? "outline"
+                            : ev.group === "IGNITION"
+                              ? "secondary"
+                              : "default"
                         }
                       >
                         {ev.group}
@@ -670,9 +674,11 @@ export function App1({
                                 <Badge
                                   key={ev}
                                   variant={
-                                    getEventGroup(ev) === "IGNITION"
-                                      ? "secondary"
-                                      : "default"
+                                    getEventGroup(ev) === "Legacy"
+                                      ? "outline"
+                                      : getEventGroup(ev) === "IGNITION"
+                                        ? "secondary"
+                                        : "default"
                                   }
                                   className="text-[10px] px-1.5 py-0"
                                 >

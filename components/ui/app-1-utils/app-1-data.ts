@@ -105,7 +105,7 @@ export function buildDailyChart(rows: Registration[]): DailyChartPoint[] {
 
 export interface EventStat {
   event: string;
-  group: "UDAAN" | "IGNITION";
+  group: "UDAAN" | "IGNITION" | "Legacy";
   count: number;
   teamCount: number;
 }

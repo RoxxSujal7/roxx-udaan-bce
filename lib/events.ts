@@ -17,9 +17,9 @@ export const UDAAN_SPORTS_AND_CULTURAL_EVENTS = [
 ] as const;
 
 export const IGNITION_ESPORTS_EVENTS = [
-  "COD Mobile",
+  "BGMI",
+  "Free Fire",
   "Valorant",
-  "Clash Royale",
 ] as const;
 
 export const ALL_ALLOWED_EVENTS = [
@@ -30,7 +30,10 @@ export const ALL_ALLOWED_EVENTS = [
 export type UdaanEvent = (typeof ALL_ALLOWED_EVENTS)[number];
 
 const IGNITION_SET = new Set<string>(IGNITION_ESPORTS_EVENTS);
+const LEGACY_SET = new Set<string>(["COD Mobile", "Clash Royale"]);
 
-export function getEventGroup(event: string): "UDAAN" | "IGNITION" {
-  return IGNITION_SET.has(event) ? "IGNITION" : "UDAAN";
+export function getEventGroup(event: string): "UDAAN" | "IGNITION" | "Legacy" {
+  if (IGNITION_SET.has(event)) return "IGNITION";
+  if (LEGACY_SET.has(event)) return "Legacy";
+  return "UDAAN";
 }

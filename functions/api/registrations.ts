@@ -24,9 +24,9 @@ const ALLOWED_EVENTS = new Set<string>([
   "Tug of War",
   "Literary",
   "Cultural",
-  "COD Mobile",
+  "BGMI",
+  "Free Fire",
   "Valorant",
-  "Clash Royale",
 ]);
 
 const TEAM_APPLICABLE_EVENTS = new Set<string>([
@@ -37,7 +37,14 @@ const TEAM_APPLICABLE_EVENTS = new Set<string>([
   "Tug of War",
   "Badminton",
   "Table Tennis",
-  "COD Mobile",
+  "BGMI",
+  "Free Fire",
+  "Valorant",
+]);
+
+const TEAM_REQUIRED_EVENTS = new Set<string>([
+  "BGMI",
+  "Free Fire",
   "Valorant",
 ]);
 
@@ -250,6 +257,15 @@ export async function onRequestPost(context: PagesContext): Promise<Response> {
   const hasTeamApplicable = uniqueEvents.some((ev) =>
     TEAM_APPLICABLE_EVENTS.has(ev),
   );
+  const hasTeamRequired = uniqueEvents.some((ev) =>
+    TEAM_REQUIRED_EVENTS.has(ev),
+  );
+  if (hasTeamRequired && body.participationType !== "team") {
+    return jsonResponse(
+      { ok: false, error: "Team entry is required for IGNITION esports events." },
+      400,
+    );
+  }
   const participationType =
     hasTeamApplicable && body.participationType === "team"
       ? "team"
