@@ -82,39 +82,39 @@ if (hamburger) {
       if (hamImg) hamImg.style.animation = "span-right 0.45s linear forwards";
       if (hamText) hamText.style.animation = "span-left 0.45s linear forwards";
       if (hamLogo) {
-        hamLogo.style.animation = "come-up 0.45s linear forwards";
+        hamLogo.style.animation = "none";
         hamLogo.style.opacity = "1";
         hamLogo.style.transform = "translateY(0)";
       }
       if (hamIcons) {
-        hamIcons.style.animation = "come-down 0.45s linear forwards";
+        hamIcons.style.animation = "none";
         hamIcons.style.opacity = "1";
         hamIcons.style.transform = "translateY(0)";
       }
       if (hamLinks) {
-        hamLinks.style.animation = "come-up 0.45s linear forwards";
+        hamLinks.style.animation = "none";
         hamLinks.style.opacity = "1";
         hamLinks.style.transform = "translateY(0)";
       }
 
       for (let i = 0; i < hamLink.length; i++) {
-        const link = hamLink[i];
-        link.style.animation = "link-up 0.2s linear 0.45s";
-        setTimeout(() => {
-          if (open) link.style.opacity = 1;
-        }, 500);
+        hamLink[i].style.animation = "none";
+        hamLink[i].style.opacity = "1";
+        hamLink[i].style.transform = "translateY(0)";
       }
 
-      if (hamIcon[0]) hamIcon[0].style.animation = "link-up 0.2s linear 0.45s";
-      if (hamIcon[1]) hamIcon[1].style.animation = "link-up 0.2s linear 0.45s";
-      if (hamLogoImg) hamLogoImg.style.animation = "link-up 0.2s linear 0.45s";
-
-      setTimeout(() => {
-        if (!open) return;
-        if (hamIcon[0]) hamIcon[0].style.opacity = 1;
-        if (hamIcon[1]) hamIcon[1].style.opacity = 1;
-        if (hamLogoImg) hamLogoImg.style.opacity = 1;
-      }, 500);
+      if (hamIcon[0]) {
+        hamIcon[0].style.animation = "none";
+        hamIcon[0].style.opacity = "1";
+      }
+      if (hamIcon[1]) {
+        hamIcon[1].style.animation = "none";
+        hamIcon[1].style.opacity = "1";
+      }
+      if (hamLogoImg) {
+        hamLogoImg.style.animation = "none";
+        hamLogoImg.style.opacity = "1";
+      }
 
       if (hamLine.length >= 3) {
         hamLine[0].style.animation = "ham-up-1 0.15s linear";
