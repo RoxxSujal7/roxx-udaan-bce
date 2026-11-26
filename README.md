@@ -64,8 +64,8 @@ It serves prospective participants, student coordinators, and campus visitors wi
 The site keeps static HTML pages as the outer shell and mounts React bundles into dedicated root elements:
 
 - `#events-carousel-root` → `src/events-entry.tsx` → `Scripts/events-carousel.bundle.{js,css}`
-- `#footer-root` → `src/footer-entry.tsx` → `Scripts/footer.bundle.js`
-- `#gallery-root` → `src/gallery-entry.jsx` → `Scripts/gallery-carousel.bundle.{js,css}`
+- `#udaan-footer-root` → `src/footer-entry.tsx` → `Scripts/footer.bundle.js`
+- `#gallery-carousel-root` → `src/gallery-entry.jsx` → `Scripts/gallery-carousel.bundle.{js,css}`
 - `#elias-root` → `src/developers-entry.tsx` → `Scripts/developers-hero.bundle.{js,css}`
 - `#registration-form-root` → `src/registration-entry.tsx` → `Scripts/registration-form.bundle.{js,css}`
 

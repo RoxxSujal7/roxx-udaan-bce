@@ -54,7 +54,7 @@ This audit inspected the static HTML pages, CSS/JS assets, React/TypeScript isla
 | **Medium** | Production-domain SEO items remain `[TODO]` until final domain is confirmed (`canonical`, `og:url`, absolute `og:image`, `sitemap.xml`) | All 6 HTML pages, `robots.txt` | **Pending domain** |
 | **Low** | Unused `clsx` and `tailwind-merge` entries in `package.json` | `package.json` | **Fixed** (removed) |
 | **Low** | Trailing whitespace on `index.html:2` | `index.html:2` | **Fixed** |
-| **Info** | `README.md` still references upstream `BOSM-main` / `dvm-bitspilani` | `README.md` | **Deferred** |
+| **Info** | `README.md` previously referenced upstream `BOSM-main` / `dvm-bitspilani` | `README.md` | **Fixed** (rewritten for UDAAN 2026) |
 
 ---
 

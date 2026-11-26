@@ -59,6 +59,8 @@ udaan-site/
 - **6-Step Registration Form:** `components/ui/multistep-form.tsx` + 8 shadcn primitives, supporting `+91` & international phone validation, conditional team fields, UDAAN + IGNITION event selection, review & consent, and `POST /api/registrations` submission.
 - **Cloudflare Pages Function & Supabase Migration:** `functions/api/registrations.ts` and `supabase/migrations/001_create_event_registrations.sql` (tested locally with mocked `fetch`, **not yet verified against live Supabase**).
 - **Phase 4F & 4G:** Performance bundle splits/deferrals and technical SEO metadata (`<title>`, `lang="en"`, OG/Twitter, JSON-LD, `alt` text, `_headers`, `robots.txt`).
+- **Mobile Overflow & CLS Verification:** Fixed `index.html` mobile horizontal overflow in `Styles/responsive.css` (`transform: translateY(0.8rem)` on `.right`). Verified `0` horizontal overflow across all 6 pages and all 5 viewports (`1440×900`, `1280×800`, `768×1024`, `390×844`, `360×800`), and measured Playwright `PerformanceObserver` CLS (not Lighthouse): `0.0001` on `index.html`, `0.0038` on `Templates/developers.html`, and `0` on the other 4 pages.
+- **Standalone GitHub Publication:** Initial solo-author release published to `https://github.com/RoxxSujal7/roxx-udaan-bce` (`main`), with `README.md` rewritten for UDAAN 2026.
 
 ---
 
@@ -84,7 +86,7 @@ udaan-site/
 
 ## E. Technical Decisions
 
-- **Static HTML + Isolated React:** Existing HTML pages and `.loader`/`.ham-grid` scripts are preserved; React mounts only into dedicated containers (`#events-carousel-root`, `#footer-root`, `#gallery-root`, `#elias-root`, `#registration-form-root`).
+- **Static HTML + Isolated React:** Existing HTML pages and `.loader`/`.ham-grid` scripts are preserved; React mounts only into dedicated containers (`#events-carousel-root`, `#udaan-footer-root`, `#gallery-carousel-root`, `#elias-root`, `#registration-form-root`).
 - **Tailwind v4 without Preflight:** CSS entrypoints import `tailwindcss/theme.css` and `tailwindcss/utilities.css` (skipping Preflight) so legacy `Styles/*.css` layouts are not broken.
 - **Shared `lib/utils.ts`:** Kept zero-dependency `cn(...)` helper; `clsx` and `tailwind-merge` were removed as unused.
 - **Animation library:** Standardized on `motion` (`motion/react`) across `doodle-crew-footer.tsx`, `FlexCarousel`, and `multistep-form.tsx`.
@@ -114,10 +116,9 @@ npx wrangler pages dev .
 
 ## G. Next Execution Priorities
 
-1. Confirm GitHub target repo (`RoxxSujal7`) and Git author/email, then resolve the single-author vs preserved-history release decision.
-2. Complete Gate 3: apply Supabase SQL migration, configure `.dev.vars`, install `wrangler`, and verify real database persistence.
-3. Fix `index.html` mobile horizontal overflow (`390×844`, `360×800`) and reduce CLS on `index.html` and `Templates/developers.html`.
-4. Add production domain canonicals, `og:url`, absolute `og:image`, and `sitemap.xml`, then deploy to Cloudflare Pages when approved.
+1. Configure Supabase project, apply `supabase/migrations/001_create_event_registrations.sql`, set `.dev.vars`, install `wrangler`, and verify real database insertion + `submission_id` idempotency via `npx wrangler pages dev .`.
+2. Configure `SUPABASE_URL` and `SUPABASE_SECRET_KEY` as encrypted Secrets in Cloudflare Pages and deploy to production when approved.
+3. Confirm the final production domain and add canonical URLs, `og:url`, absolute `og:image`, `sitemap.xml`, and the final `Sitemap:` directive in `robots.txt`.
 
 ---
 
