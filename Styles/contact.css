@@ -123,6 +123,11 @@
   display: block;
 }
 
+.contactImg.contactPhotoZoom {
+  transform: scale(2.05);
+  transform-origin: 44% 36%;
+}
+
 .contactImgCont {
   mix-blend-mode: overlay;
   background: transparent;
@@ -134,6 +139,7 @@
 .contactImgCont:has(.contactPhoto) {
   mix-blend-mode: normal;
   opacity: 1;
+  overflow: hidden;
 }
 
 .contact-details {
