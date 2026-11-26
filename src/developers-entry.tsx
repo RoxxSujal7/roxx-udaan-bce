@@ -17,7 +17,7 @@ if (rootEl) {
           ],
           right: [
             { label: "PRINCIPAL'S MESSAGE", href: './director.html' },
-            { label: 'ARCHIVES', href: '#' },
+            { label: 'ARCHIVE', href: './archive.html' },
             { label: 'DEVELOPERS', href: './developers.html', active: true },
           ],
         }}

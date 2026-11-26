@@ -30,6 +30,7 @@
     "components/ui/tooltip.tsx",
     "components/ui/sheet.tsx",
     "components/ui/app-1.tsx",
+    "components/ui/glass-folder.tsx",
     "components/ui/app-1-utils/sidebar.tsx",
     "components/ui/app-1-utils/use-mobile.ts",
     "components/ui/app-1-utils/app-1-sidebar.tsx",
@@ -38,6 +39,8 @@
     "src/events-entry.tsx",
     "src/footer-entry.tsx",
     "src/admin-entry.tsx",
+    "src/archive-entry.tsx",
+    "src/archive/archive-page.tsx",
     "functions/api/admin/registrations.ts"
   ]
 }

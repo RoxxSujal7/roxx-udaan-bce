@@ -1,0 +1,33 @@
+@import "tailwindcss/theme.css";
+@import "tailwindcss/utilities.css";
+
+@source "../src/archive-entry.tsx";
+@source "../src/archive/archive-page.tsx";
+@source "../components/ui/glass-folder.tsx";
+
+.udaan-archive *,
+.udaan-archive *::before,
+.udaan-archive *::after {
+  box-sizing: border-box;
+}
+
+.udaan-archive {
+  font-family: "Montserrat", system-ui, sans-serif;
+  color: #f4f1ea;
+}
+
+#archive-root {
+  min-height: 100vh;
+}
+
+.udaan-archive .gf-root {
+  font-family: "Montserrat", system-ui, sans-serif;
+}
+
+/* Lighter blur on small mobile screens for smooth scrolling */
+@media (max-width: 640px) {
+  .udaan-archive .gf-front {
+    -webkit-backdrop-filter: blur(10px) saturate(1.3);
+    backdrop-filter: blur(10px) saturate(1.3);
+  }
+}
