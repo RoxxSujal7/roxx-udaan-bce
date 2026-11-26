@@ -55,7 +55,7 @@ udaan-site/
 - **Events CoverflowCarousel:** 12 UDAAN events rendered in `components/ui/coverflow-carousel.tsx` and bundled to `Scripts/events-carousel.bundle.*`.
 - **Interactive Sports-Doodle Footer:** `components/ui/doodle-crew-footer.tsx` with `Assets/Logo.png` crest, `UDAAN 2026` mouse-responsive wordmark, animated sports doodles, and high-contrast `Register Now` button.
 - **Gallery FlexCarousel:** `src/components/FlexCarousel.jsx` with 35 supplied photos in `Assets/gallery/`.
-- **Developers Elias Hero:** `components/ui/elias-author-hero.tsx` with `Assets/dev-portrait.png`, personal social links, and `Original design by DVM, BITS Pilani.` attribution on `Templates/developers.html`.
+- **Developers Elias Hero:** `components/ui/elias-author-hero.tsx` with `Assets/dev-portrait.png`, personal social links, and `Original design by RoxxSujal7.` attribution on `Templates/developers.html`.
 - **6-Step Registration Form:** `components/ui/multistep-form.tsx` + 8 shadcn primitives, supporting `+91` & international phone validation, conditional team fields, UDAAN + IGNITION event selection, review & consent, and `POST /api/registrations` submission.
 - **Cloudflare Pages Function & Supabase Migration:** `functions/api/registrations.ts` and `supabase/migrations/001_create_event_registrations.sql` (tested locally with mocked `fetch`, **not yet verified against live Supabase**).
 - **Phase 4F & 4G:** Performance bundle splits/deferrals and technical SEO metadata (`<title>`, `lang="en"`, OG/Twitter, JSON-LD, `alt` text, `_headers`, `robots.txt`).
