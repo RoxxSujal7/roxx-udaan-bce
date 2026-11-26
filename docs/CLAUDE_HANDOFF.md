@@ -38,7 +38,7 @@ udaan-site/
 │   └── 001_create_event_registrations.sql
 ├── Scripts/                            # Legacy JS + generated *.bundle.js / *.bundle.css
 ├── Styles/                             # Legacy CSS + loader.css
-├── Assets/                             # Logos, Principal photo, gallery/ (35 photos), ignition/
+├── Assets/                             # Logos, Principal photo, contacts/ (3 portraits), gallery/ (35 photos), ignition/
 ├── _headers                            # Cloudflare Pages security & cache headers
 ├── robots.txt                          # Crawler directives (sitemap URL pending domain)
 ├── .dev.vars.example                   # Placeholder env var names for local Wrangler dev
@@ -54,7 +54,9 @@ udaan-site/
 - **Homepage & About Us:** UDAAN 2026 branding, BCE & DSSTE institutional logos (`Assets/bce-logo.png`, `Assets/dsste-logo.png`), Principal's message preview (`Assets/principal-bimlesh-kumar.jpg`).
 - **Events CoverflowCarousel:** 12 UDAAN events rendered in `components/ui/coverflow-carousel.tsx` and bundled to `Scripts/events-carousel.bundle.*`.
 - **Interactive Sports-Doodle Footer:** `components/ui/doodle-crew-footer.tsx` mounted on **all 6 pages** (`#udaan-footer-root` + `Scripts/footer.bundle.js`), with `src/footer-entry.tsx` resolving `./` vs `../` paths automatically.
-- **Intro Loader Lifecycle:** `Scripts/loaderIndex.js` (Home) and `Scripts/loader.js` (inner pages) use `sessionStorage` (`udaan_intro_seen`) + `prefers-reduced-motion` + error/timeout fallbacks so inner pages never replay or trap visitors.
+- **Intro Loader & Hamburger Navigation:** `Scripts/loaderIndex.js` (Home) and `Scripts/loader.js` (inner pages) use `sessionStorage` (`udaan_intro_seen`) + `prefers-reduced-motion` + crest/timeout fallbacks (`37413aa`, `67223e5`) so intro video autoplays reliably on fresh sessions and inner pages never trap visitors. Fixed `.ham-grid` / `.ham-links` visibility across desktop and mobile (`a8d16d2`, `67223e5`).
+- **Contact Us Section:** Updated `#contactUs` (`index.html`, `Scripts/contacts.js`, `Styles/contact.css`) with all 4 official contacts (`Rohit Sir`, `Akash Deep`, `Harsh Kumar`, `Pranav Raj`), `tel:` links (`+91 70707 57533`, `+91 70917 99059`, `+91 91997 22066`, `+91 88629 37210`), and portraits in `Assets/contacts/` (`akash.jpg` with `.contactPhotoZoom` framing, `harsh.jpg`, `pranav.jpg`; `Rohit Sir` using `Assets/Logo.png`) (`491bcb9`, `b2d11e3`, `89e2cfa`).
+- **HTML/CSS Audit & Ignition Registration Links:** Wired all 3 `Templates/ignition.html` `REGISTER` links (`COD Mobile`, `Valorant`, `Clash Royale`) to `./registration.html`; fixed invalid `grid-row: 1 / a 2` in `Styles/developers.css` & `Styles/sponsors.css`; resolved duplicate `id="contact"` (`#message-nav`) and duplicate SVG gradient IDs (`paint0_radial_865_1333_end`) in `index.html` and `Templates/director.html` (`491bcb9`).
 - **Gallery FlexCarousel:** `src/components/FlexCarousel.jsx` with 35 supplied photos in `Assets/gallery/`.
 - **Developers Elias Hero:** `components/ui/elias-author-hero.tsx` with `Assets/dev-portrait.png`, personal social links, `320px` mobile navbar/orange-circle fix in `src/developers.css`, and `Original design by Roxx` attribution on `Templates/developers.html`.
 - **6-Step Registration Form:** `components/ui/multistep-form.tsx` + 8 shadcn primitives, supporting `+91` & international phone validation, conditional team fields, UDAAN + IGNITION event selection, review & consent, and `POST /api/registrations` submission.
