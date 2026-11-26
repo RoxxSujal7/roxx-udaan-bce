@@ -192,9 +192,15 @@ body::-webkit-scrollbar {
     width: 100%;
 }
 
+.ham-img img {
+    object-fit: cover;
+    object-position: center;
+}
+
 .ham-img,
 .ham-text {
     position: relative;
+    overflow: hidden;
 }
 
 .ham-img span,
