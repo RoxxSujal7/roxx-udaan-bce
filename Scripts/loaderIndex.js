@@ -2,20 +2,18 @@ const INTRO_KEY = "udaan_intro_seen";
 
 const getIntroSeen = () => {
   try {
-    if (window.sessionStorage && sessionStorage.getItem(INTRO_KEY) === "1") {
-      return true;
-    }
-  } catch {}
-  return document.cookie
-    .split(";")
-    .some((c) => c.trim() === "showContinue=false");
+    return Boolean(
+      window.sessionStorage && sessionStorage.getItem(INTRO_KEY) === "1",
+    );
+  } catch {
+    return false;
+  }
 };
 
 const markIntroSeen = () => {
   try {
     if (window.sessionStorage) sessionStorage.setItem(INTRO_KEY, "1");
   } catch {}
-  document.cookie = "showContinue=false; path=/; SameSite=Lax";
 };
 
 const releaseVideo = () => {
@@ -183,6 +181,23 @@ const startIntro = () => {
     }, 2901);
   }
 
+  const showFallbackCrest = () => {
+    if (video) video.style.display = "none";
+    const wrapper = loader.querySelector(".video-wrapper");
+    if (wrapper && !wrapper.querySelector(".loader-fallback-crest")) {
+      const img = document.createElement("img");
+      img.src = "Assets/Logo.png";
+      img.alt = "UDAAN 2026";
+      img.className = "loader-fallback-crest";
+      img.style.cssText = "width:100%;height:100%;object-fit:contain;padding:12%;";
+      wrapper.appendChild(img);
+    }
+    if (hide) {
+      hide.textContent = "TAP TO ENTER";
+      hide.style.opacity = 0.9;
+    }
+  };
+
   // Never trap the user if video fails to load or autoplay is blocked
   const tryPlayVideo = () => {
     if (!video || dismissed) return;
@@ -195,7 +210,7 @@ const startIntro = () => {
       const playPromise = video.play();
       if (playPromise && typeof playPromise.catch === "function") {
         playPromise.catch(() => {
-          if (hide) hide.style.opacity = 0.9;
+          showFallbackCrest();
         });
       }
     }
@@ -203,6 +218,7 @@ const startIntro = () => {
 
   if (video) {
     video.addEventListener("error", () => dismissLoader(true), { once: true });
+    video.addEventListener("loadeddata", tryPlayVideo, { once: true });
     video.addEventListener("canplay", tryPlayVideo, { once: true });
     tryPlayVideo();
   }

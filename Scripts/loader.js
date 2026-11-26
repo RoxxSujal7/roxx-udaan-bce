@@ -15,7 +15,6 @@ const markIntroSeen = () => {
   try {
     if (window.sessionStorage) sessionStorage.setItem(INTRO_KEY, "1");
   } catch {}
-  document.cookie = "showContinue=false; path=/; SameSite=Lax";
 };
 
 const releaseVideo = () => {

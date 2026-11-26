@@ -98,7 +98,10 @@ let sound = new Audio("Assets/switchsound.mp3");
 function flicker() {
   sound.volume = 0.3;
   sound.playbackRate = 1.3;
-  sound.play();
+  const p = sound.play();
+  if (p && typeof p.catch === "function") {
+    p.catch(() => {});
+  }
 }
 
 ////////// LINES Transform
