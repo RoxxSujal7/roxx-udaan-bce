@@ -1,0 +1,3 @@
+# Local Cloudflare Pages Functions secrets (copy to .dev.vars for local testing; NEVER commit .dev.vars)
+SUPABASE_URL=https://your-project-ref.supabase.co
+SUPABASE_SECRET_KEY=sb_secret_your_secret_key_here

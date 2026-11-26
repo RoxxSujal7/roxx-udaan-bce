@@ -1,0 +1,40 @@
+{
+  "name": "udaan-site",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build:gallery": "esbuild src/gallery-entry.jsx --bundle --minify --jsx=automatic --outfile=Scripts/gallery-carousel.bundle.js",
+    "build:events:css": "tailwindcss -i src/events-coverflow.css -o Scripts/events-carousel.bundle.css --minify",
+    "build:events:js": "esbuild src/events-entry.tsx --bundle --minify --jsx=automatic --outfile=Scripts/events-carousel.bundle.js",
+    "build:events": "npm run build:events:css && npm run build:events:js",
+    "build:footer": "esbuild src/footer-entry.tsx --bundle --minify --jsx=automatic --outfile=Scripts/footer.bundle.js",
+    "build:developers:css": "tailwindcss -i src/developers.css -o Scripts/developers-hero.bundle.css --minify",
+    "build:developers:js": "esbuild src/developers-entry.tsx --bundle --minify --jsx=automatic --outfile=Scripts/developers-hero.bundle.js",
+    "build:developers": "npm run build:developers:css && npm run build:developers:js",
+    "build:registration:css": "tailwindcss -i src/registration-form.css -o Scripts/registration-form.bundle.css --minify",
+    "build:registration:js": "esbuild src/registration-entry.tsx --bundle --minify --jsx=automatic --outfile=Scripts/registration-form.bundle.js",
+    "build:registration": "npm run build:registration:css && npm run build:registration:js"
+  },
+  "dependencies": {
+    "@radix-ui/react-checkbox": "^1.4.1",
+    "@radix-ui/react-label": "^2.1.17",
+    "@radix-ui/react-radio-group": "^1.5.1",
+    "@radix-ui/react-select": "^2.4.1",
+    "@radix-ui/react-slot": "^1.5.0",
+    "class-variance-authority": "^0.7.1",
+    "lucide-react": "^1.80.0",
+    "motion": "^14.14.0",
+    "ogl": "^1.0.11",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "sonner": "^2.0.8"
+  },
+  "devDependencies": {
+    "@tailwindcss/cli": "^4.3.5",
+    "@types/react": "^19.3.3",
+    "@types/react-dom": "^19.3.0",
+    "esbuild": "^0.25.0",
+    "tailwindcss": "^4.3.5",
+    "typescript": "^7.0.2"
+  }
+}

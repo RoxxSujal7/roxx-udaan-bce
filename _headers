@@ -1,0 +1,25 @@
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  X-Frame-Options: SAMEORIGIN
+
+/Assets/*
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+
+/Scripts/*
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+
+/Styles/*
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+
+/src/*
+  X-Robots-Tag: noindex, nofollow
+
+/components/*
+  X-Robots-Tag: noindex, nofollow
+
+/lib/*
+  X-Robots-Tag: noindex, nofollow
+
+/node_modules/*
+  X-Robots-Tag: noindex, nofollow

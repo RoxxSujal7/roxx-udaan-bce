@@ -1,0 +1,86 @@
+@import "tailwindcss/theme.css";
+@import "tailwindcss/utilities.css";
+
+@source "../components/ui/multistep-form.tsx";
+@source "../components/ui/button.tsx";
+@source "../components/ui/input.tsx";
+@source "../components/ui/label.tsx";
+@source "../components/ui/card.tsx";
+@source "../components/ui/radio-group.tsx";
+@source "../components/ui/checkbox.tsx";
+@source "../components/ui/select.tsx";
+@source "../components/ui/textarea.tsx";
+@source "../src/registration-entry.tsx";
+
+@theme {
+  --color-background: #0b0b0f;
+  --color-foreground: #f8fafc;
+  --color-card: rgba(15, 17, 23, 0.9);
+  --color-card-foreground: #f8fafc;
+  --color-popover: #141720;
+  --color-popover-foreground: #f8fafc;
+  --color-primary: #f97316;
+  --color-primary-foreground: #ffffff;
+  --color-secondary: #1e293b;
+  --color-secondary-foreground: #f8fafc;
+  --color-muted: #1e222d;
+  --color-muted-foreground: #9ca3af;
+  --color-accent: #1f2430;
+  --color-accent-foreground: #ffffff;
+  --color-destructive: #ef4444;
+  --color-destructive-foreground: #ffffff;
+  --color-border: rgba(255, 255, 255, 0.14);
+  --color-input: rgba(255, 255, 255, 0.2);
+  --color-ring: rgba(249, 115, 22, 0.5);
+}
+
+/* Ensure registration container is visible and properly sized */
+#reg-cont {
+  display: block !important;
+  width: min(94vw, 760px) !important;
+  margin: 5rem auto 3rem !important;
+  background: transparent !important;
+}
+
+#registration-form-root,
+#registration-form-root * {
+  box-sizing: border-box;
+  font-family: "Montserrat", system-ui, -apple-system, sans-serif;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+#registration-form-root *,
+#registration-form-root *::before,
+#registration-form-root *::after {
+  border-color: var(--color-border);
+}
+
+#registration-form-root input,
+#registration-form-root textarea {
+  background-color: rgba(15, 17, 23, 0.85);
+  color: #f8fafc;
+}
+
+#registration-form-root input::placeholder,
+#registration-form-root textarea::placeholder {
+  color: #9ca3af;
+}
+
+#registration-form-root button[role="checkbox"] {
+  width: 1rem;
+  height: 1rem;
+  min-width: 1rem;
+  min-height: 1rem;
+  padding: 0;
+  margin: 0;
+}
+
+#registration-form-root button[role="radio"] {
+  width: 1rem;
+  height: 1rem;
+  min-width: 1rem;
+  min-height: 1rem;
+  padding: 0;
+  margin: 0;
+}

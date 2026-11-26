@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+Allow: /Assets/
+Allow: /Scripts/
+Allow: /Styles/
+Disallow: /src/
+Disallow: /components/
+Disallow: /lib/
+Disallow: /node_modules/

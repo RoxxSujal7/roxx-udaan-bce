@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+ 
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link href="../Assets/Logo.png" rel="shortcut icon" type="image/x-icon" />
+  <script defer src="https://kit.fontawesome.com/5397743099.js" crossorigin="anonymous"></script>
+  <link href="https://fonts.googleapis.com" rel="preconnect" />
+  <link crossorigin href="https://fonts.gstatic.com" rel="preconnect" />
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;500;600&display=swap" rel="stylesheet" />
+  <link href="../Styles/gallery.css" rel="stylesheet" />
+  <link href="../Styles/loader.css" rel="stylesheet" />
+  <link href="../Scripts/gallery-carousel.bundle.css" rel="stylesheet" />
+
+  <script defer src="../Scripts/hamburger.js"></script>
+  <script defer src="../Scripts/loader.js"></script>
+  <script defer src="../Scripts/gallery-carousel.bundle.js"></script>
+  <title>Gallery — UDAAN 2026</title>
+  <meta name="description" content="Gallery for UDAAN 2026, the annual sports fest of Bhagalpur College of Engineering (BCE), Bhagalpur." />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="UDAAN 2026" />
+  <meta property="og:title" content="Gallery — UDAAN 2026" />
+  <meta property="og:description" content="Gallery for UDAAN 2026, the annual sports fest of Bhagalpur College of Engineering (BCE), Bhagalpur." />
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="Gallery — UDAAN 2026" />
+  <meta name="twitter:description" content="Gallery for UDAAN 2026, the annual sports fest of Bhagalpur College of Engineering (BCE), Bhagalpur." />
+</head>
+
+<body>
+  <div class="loader">
+    <div class="video-wrapper">
+      <video autoplay loop muted playsinline id="video" width="100%">
+        <source src="../Assets/loader.mp4" type="video/mp4" />
+      </video>
+      <div class="shadow"></div>
+    </div>
+
+    <div class="hide">CLICK TO CONTINUE</div>
+  </div>
+  <!-- <div id="gal-close">
+        <a href="../index.html"><img alt="" id="gal-close-img" src="../Assets/Back.svg" /></a>
+      </div> -->
+
+  <div class="ham-grid">
+    <div class="ham-logo ham-hide"><img src="../Assets/ham-logo.png" alt="" /></div>
+    <div class="ham-img ham-hide">
+      <img src="../Assets/ham-img.png" alt="" /><span></span>
+    </div>
+
+    <div class="ham-links">
+      <div>
+        <a href="../index.html">HOME</a>
+        <a href="./registration.html">REGISTRATION</a>
+        <a href="./ignition.html">IGNITION</a>
+        <a href="./director.html">PRINCIPAL'S MESSAGE</a>
+        <a href="#" title="[TODO: UDAAN Archives URL]">ARCHIVES</a>
+        <a style="display: none" href="#">LOGIN</a>
+        <a href="./developers.html">DEVELOPERS</a>
+      </div>
+    </div>
+
+    <div class="ham-text ham-hide">
+      <img src="../Assets/ham-text.png" alt="" /><span></span>
+    </div>
+    <div class="ham-icons ham-hide">
+      <a href="https://www.facebook.com/profile.php?id=61552059662887" target="_blank" rel="noopener noreferrer" aria-label="BCE Facebook">
+        <img aria-hidden="true" src="../Assets/Facebook.png" alt="" class="ham-icon" />
+      </a>
+      <a href="https://www.instagram.com/udaan_bce/" target="_blank" rel="noopener noreferrer" aria-label="UDAAN Instagram">
+        <img aria-hidden="true" src="../Assets/Instagram.png" alt="" class="ham-icon" />
+      </a>
+    </div>
+  </div>
+
+  <nav class="nav">
+    <div class="right">
+      <div class="ham-cont">
+        <div class="hamburger">
+          <span class="ham-1"></span>
+          <span class="ham-2"></span>
+          <span class="ham-3"></span>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <div class="heading">
+    <h2 class="gal-head">GALLERY</h2>
+  </div>
+
+  <div class="gallery">
+    <div class="galleryCont" style="width: 100%; height: 560px; position: relative;">
+      <div id="gallery-carousel-root" style="width: 100%; height: 560px; position: relative;"></div>
+    </div>
+  </div>
+</body>
+
+</html>

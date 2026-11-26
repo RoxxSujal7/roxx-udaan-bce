@@ -1,0 +1,59 @@
+@import "tailwindcss/theme.css";
+@import "tailwindcss/utilities.css";
+@source "../components/ui/coverflow-carousel.tsx";
+@source "../src/events-entry.tsx";
+
+@theme {
+  --color-background: #0a0a0a;
+  --color-foreground: #ffffff;
+  --color-muted: #18181b;
+  --color-muted-foreground: #a1a1aa;
+  --color-ring: rgba(255, 255, 255, 0.45);
+}
+
+#events-carousel-root *,
+#events-carousel-root *::before,
+#events-carousel-root *::after {
+  box-sizing: border-box;
+  border: 0 solid transparent;
+}
+
+#events-carousel-root button {
+  background-color: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+/* Neutralize .absolute { right: 0; top: 0; } from Styles/director.css */
+#events-carousel-root .absolute {
+  right: auto;
+  top: auto;
+}
+
+#events-carousel-root button[aria-label="Previous slide"],
+#events-carousel-root button[aria-label="Next slide"] {
+  width: 36px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#events-carousel-root button[aria-label="Previous slide"] {
+  left: 0.75rem;
+  right: auto;
+}
+
+#events-carousel-root button[aria-label="Next slide"] {
+  right: 0.75rem;
+  left: auto;
+}
+
+#events-carousel-root .top-0 {
+  top: 0;
+}
+
+#events-carousel-root .top-1\/2 {
+  top: 50%;
+}
