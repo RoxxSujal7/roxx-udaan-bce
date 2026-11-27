@@ -37,6 +37,10 @@ import {
 } from "@/components/ui/sheet";
 import { ALL_ALLOWED_EVENTS } from "@/lib/events";
 import {
+  BracketsControlCard,
+  ChampionshipControlCard,
+} from "@/components/ui/app-1-utils/championship-control";
+import {
   formatISTShortTime,
   isAnnouncementActive,
   toISTDateKey,
@@ -111,15 +115,17 @@ export function LiveControl({ adminPassword }: LiveControlProps) {
     matches,
     announcements,
     teams,
+    podiums,
+    brackets,
     connection,
     refetch,
     setMatchesOptimistic,
     setAnnouncementsOptimistic,
   } = useLiveData();
 
-  const [activeSubTab, setActiveSubTab] = React.useState<"matches" | "teams">(
-    "matches",
-  );
+  const [activeSubTab, setActiveSubTab] = React.useState<
+    "matches" | "teams" | "championship" | "brackets"
+  >("matches");
 
   // ── Teams tab state ──────────────────────────────────────────────────────
   const [teamEvent, setTeamEvent] = React.useState<string>("Cricket");
@@ -196,7 +202,7 @@ export function LiveControl({ adminPassword }: LiveControlProps) {
   // ── API helper ───────────────────────────────────────────────────────────
   async function apiCall<T>(
     url: string,
-    method: "POST" | "PATCH" | "DELETE",
+    method: "POST" | "PATCH" | "PUT" | "DELETE",
     body?: unknown,
   ): Promise<{ ok: true; data: T } | { ok: false; error: string }> {
     try {
@@ -764,7 +770,7 @@ export function LiveControl({ adminPassword }: LiveControlProps) {
         </CardContent>
       </Card>
 
-      {/* ── Sub-tab switcher: Matches | Teams ── */}
+      {/* ── Sub-tab switcher: Matches | Teams | Championship | Brackets ── */}
       <div className="flex flex-wrap items-center gap-2">
         <Button
           type="button"
@@ -784,7 +790,45 @@ export function LiveControl({ adminPassword }: LiveControlProps) {
         >
           Teams ({teams.length})
         </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant={activeSubTab === "championship" ? "default" : "outline"}
+          className="min-h-10"
+          onClick={() => setActiveSubTab("championship")}
+        >
+          Championship ({podiums.length})
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant={activeSubTab === "brackets" ? "default" : "outline"}
+          className="min-h-10"
+          onClick={() => setActiveSubTab("brackets")}
+        >
+          Brackets ({brackets.length})
+        </Button>
       </div>
+
+      {/* ── Championship management tab ── */}
+      {activeSubTab === "championship" && (
+        <ChampionshipControlCard
+          podiums={podiums}
+          teams={teams}
+          apiCall={apiCall}
+          refetch={refetch}
+        />
+      )}
+
+      {/* ── Brackets management tab ── */}
+      {activeSubTab === "brackets" && (
+        <BracketsControlCard
+          brackets={brackets}
+          teams={teams}
+          apiCall={apiCall}
+          refetch={refetch}
+        />
+      )}
 
       {/* ── Teams management tab ── */}
       {activeSubTab === "teams" && (

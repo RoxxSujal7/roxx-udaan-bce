@@ -92,3 +92,37 @@ export type LiveConnectionState =
   | "realtime"
   | "fallback"
   | "offline";
+
+export interface Podium {
+  id: string;
+  event: string;
+  place: 1 | 2 | 3;
+  department: Department;
+  team_id: string | null;
+  label: string | null;
+  awarded_at: string;
+}
+
+export interface ChampionshipStanding {
+  department: Department;
+  counts_for: "udaan" | "ignition";
+  points: number;
+  gold: number;
+  silver: number;
+  bronze: number;
+}
+
+export interface BracketData {
+  stage: unknown[];
+  group: unknown[];
+  round: unknown[];
+  match: unknown[];
+  match_game: unknown[];
+  participant: unknown[];
+}
+
+export interface BracketRecord {
+  event: string;
+  data: BracketData;
+  updated_at: string;
+}

@@ -13,6 +13,10 @@ import {
 } from "@/components/ui/sheet";
 import { getEventGroup } from "@/lib/events";
 import { FEATURES, NTFY_PUBLIC_TOPIC } from "@/lib/public-config";
+import {
+  BracketsSection,
+  ChampionshipSection,
+} from "@/src/live/championship-view";
 import { QrCodeSvg } from "@/src/live/qr-code";
 import {
   buildFeed,
@@ -301,11 +305,28 @@ function MatchCard({
 }
 
 export function LiveBoard() {
-  const { matches, announcements, teams, standings, connection, lastUpdated, loaded } =
-    useLiveData();
-  const [activeTab, setActiveTab] = React.useState<"scores" | "standings">(
-    "scores",
-  );
+  const {
+    matches,
+    announcements,
+    teams,
+    standings,
+    podiums,
+    championshipStandings,
+    brackets,
+    connection,
+    lastUpdated,
+    loaded,
+  } = useLiveData();
+  const [activeTab, setActiveTab] = React.useState<
+    "scores" | "standings" | "championship" | "brackets"
+  >(() => {
+    if (typeof window === "undefined") return "scores";
+    const t = new URLSearchParams(window.location.search).get("tab");
+    if (t === "standings" && FEATURES.standings) return "standings";
+    if (t === "championship" && FEATURES.championship) return "championship";
+    if (t === "brackets" && FEATURES.brackets) return "brackets";
+    return "scores";
+  });
   const [filter, setFilter] = React.useState<string>(() => loadSavedFilter());
   const [nowMs, setNowMs] = React.useState(() => Date.now());
   const [isMobile, setIsMobile] = React.useState(false);
@@ -437,8 +458,8 @@ export function LiveBoard() {
         <ConnectionPill state={connection} />
       </div>
 
-      {/* View tabs (Live & Schedule | Standings) */}
-      {FEATURES.standings && (
+      {/* View tabs (Live & Schedule | Standings | Championship | Brackets) */}
+      {(FEATURES.standings || FEATURES.championship || FEATURES.brackets) && (
         <div
           className="mb-5 flex flex-wrap gap-2 border-b border-white/10 pb-3"
           role="tablist"
@@ -457,19 +478,51 @@ export function LiveBoard() {
           >
             Live &amp; Schedule
           </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={activeTab === "standings"}
-            onClick={() => setActiveTab("standings")}
-            className={`min-h-10 cursor-pointer rounded-lg px-4 py-2 text-xs font-semibold uppercase tracking-wider transition-colors ${
-              activeTab === "standings"
-                ? "bg-[#ff6b2b] text-black"
-                : "bg-[#141414] text-zinc-300 hover:bg-white/10"
-            }`}
-          >
-            Standings
-          </button>
+          {FEATURES.standings && (
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeTab === "standings"}
+              onClick={() => setActiveTab("standings")}
+              className={`min-h-10 cursor-pointer rounded-lg px-4 py-2 text-xs font-semibold uppercase tracking-wider transition-colors ${
+                activeTab === "standings"
+                  ? "bg-[#ff6b2b] text-black"
+                  : "bg-[#141414] text-zinc-300 hover:bg-white/10"
+              }`}
+            >
+              Standings
+            </button>
+          )}
+          {FEATURES.championship && (
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeTab === "championship"}
+              onClick={() => setActiveTab("championship")}
+              className={`min-h-10 cursor-pointer rounded-lg px-4 py-2 text-xs font-semibold uppercase tracking-wider transition-colors ${
+                activeTab === "championship"
+                  ? "bg-[#ff6b2b] text-black"
+                  : "bg-[#141414] text-zinc-300 hover:bg-white/10"
+              }`}
+            >
+              Championship
+            </button>
+          )}
+          {FEATURES.brackets && (
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeTab === "brackets"}
+              onClick={() => setActiveTab("brackets")}
+              className={`min-h-10 cursor-pointer rounded-lg px-4 py-2 text-xs font-semibold uppercase tracking-wider transition-colors ${
+                activeTab === "brackets"
+                  ? "bg-[#ff6b2b] text-black"
+                  : "bg-[#141414] text-zinc-300 hover:bg-white/10"
+              }`}
+            >
+              Brackets
+            </button>
+          )}
         </div>
       )}
 
@@ -500,13 +553,20 @@ export function LiveBoard() {
         })}
       </div>
 
-      {/* Standings View */}
+      {/* Standings / Championship / Brackets Views */}
       {FEATURES.standings && activeTab === "standings" ? (
         <StandingsSection
           standings={standings}
           activeFilter={activeFilter}
           onSelectTeam={handleSelectTeam}
         />
+      ) : FEATURES.championship && activeTab === "championship" ? (
+        <ChampionshipSection
+          standings={championshipStandings}
+          podiums={podiums}
+        />
+      ) : FEATURES.brackets && activeTab === "brackets" ? (
+        <BracketsSection brackets={brackets} />
       ) : (
         <>
       {/* Empty state */}

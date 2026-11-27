@@ -41,6 +41,7 @@
     "components/ui/app-1-utils/app-1-sidebar.tsx",
     "components/ui/app-1-utils/app-1-data.ts",
     "components/ui/app-1-utils/live-control.tsx",
+    "components/ui/app-1-utils/championship-control.tsx",
     "src/developers-entry.tsx",
     "src/events-entry.tsx",
     "src/footer-entry.tsx",
@@ -55,11 +56,14 @@
     "src/live/qr-code.tsx",
     "src/live/use-after-loader.ts",
     "src/live/live-board.tsx",
+    "src/live/championship-view.tsx",
     "src/live/live-strip.tsx",
     "src/live/live-alerts.tsx",
     "functions/api/admin/registrations.ts",
     "functions/api/admin/matches.ts",
     "functions/api/admin/announcements.ts",
-    "functions/api/admin/teams.ts"
+    "functions/api/admin/teams.ts",
+    "functions/api/admin/podiums.ts",
+    "functions/api/admin/brackets.ts"
   ]
 }

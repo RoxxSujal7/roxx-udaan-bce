@@ -3,6 +3,7 @@
 
 @source "../src/live-entry.tsx";
 @source "../src/live/live-board.tsx";
+@source "../src/live/championship-view.tsx";
 @source "../components/ui/changelog-timeline.tsx";
 
 /* Scoped reset for ChangelogTimeline on a no-Preflight page */
@@ -55,4 +56,21 @@
   --color-chart-3: #3b82f6; /* Info blue (notice) */
   font-family: "Montserrat", sans-serif;
   color: #f4f1ea;
+}
+
+/* Dark UDAAN theme variables for vendored brackets-viewer */
+#live-board-root .brackets-viewer {
+  --primary-background: #0d0d0d;
+  --secondary-background: #141414;
+  --match-background: #18181b;
+  --font-color: #f4f1ea;
+  --win-color: #34d399;
+  --loss-color: #71717a;
+  --label-color: #a1a1aa;
+  --hint-color: #ff6b2b;
+  --connector-color: rgba(255, 255, 255, 0.16);
+  --border-color: rgba(255, 255, 255, 0.12);
+  --border-hover-color: #ff6b2b;
+  font-family: "Montserrat", sans-serif;
+  padding: 0.5rem;
 }

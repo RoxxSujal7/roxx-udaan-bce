@@ -11,4 +11,6 @@ export const NTFY_PUBLIC_TOPIC = "udaan26-bce-XXXXXXXXXX";
 export const FEATURES = {
   phonePush: true,
   standings: true,
+  championship: true,
+  brackets: true,
 } as const;

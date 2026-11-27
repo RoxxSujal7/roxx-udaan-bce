@@ -7,8 +7,11 @@ import {
 import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "@/lib/public-config";
 import type {
   Announcement,
+  BracketRecord,
+  ChampionshipStanding,
   LiveConnectionState,
   Match,
+  Podium,
   Team,
   TeamHistoryEntry,
   TeamStanding,
@@ -136,6 +139,9 @@ interface LiveState {
   announcements: Announcement[];
   teams: Team[];
   standings: TeamStanding[];
+  podiums: Podium[];
+  championshipStandings: ChampionshipStanding[];
+  brackets: BracketRecord[];
   connection: LiveConnectionState;
   lastUpdated: string | null;
   loaded: boolean;
@@ -149,6 +155,9 @@ class LiveStore {
     announcements: [],
     teams: [],
     standings: [],
+    podiums: [],
+    championshipStandings: [],
+    brackets: [],
     connection: "connecting",
     lastUpdated: null,
     loaded: false,
@@ -159,6 +168,7 @@ class LiveStore {
   private pollTimer: number | null = null;
   private retryTimer: number | null = null;
   private standingsTimer: number | null = null;
+  private champTimer: number | null = null;
   private retryDelayMs = 5_000;
   private started = false;
 
@@ -240,7 +250,7 @@ class LiveStore {
   refetch = async (): Promise<void> => {
     if (!this.client) return;
     try {
-      const [mRes, aRes, tRes, sRes] = await Promise.all([
+      const [mRes, aRes, tRes, sRes, pRes, cRes, bRes] = await Promise.all([
         this.client
           .from("matches")
           .select("*")
@@ -252,6 +262,13 @@ class LiveStore {
           .limit(50),
         this.client.from("teams").select("*").order("name", { ascending: true }),
         this.client.from("team_standings").select("*"),
+        this.client
+          .from("podiums")
+          .select("*")
+          .order("awarded_at", { ascending: false })
+          .limit(60),
+        this.client.from("championship_standings").select("*"),
+        this.client.from("brackets").select("*").order("event", { ascending: true }),
       ]);
       if (!mRes.error && !aRes.error) {
         this.setState({
@@ -262,6 +279,16 @@ class LiveStore {
             !sRes.error && sRes.data
               ? (sRes.data as TeamStanding[])
               : this.state.standings,
+          podiums:
+            !pRes.error && pRes.data ? (pRes.data as Podium[]) : this.state.podiums,
+          championshipStandings:
+            !cRes.error && cRes.data
+              ? (cRes.data as ChampionshipStanding[])
+              : this.state.championshipStandings,
+          brackets:
+            !bRes.error && bRes.data
+              ? (bRes.data as BracketRecord[])
+              : this.state.brackets,
           lastUpdated: new Date().toISOString(),
           loaded: true,
         });
@@ -272,6 +299,27 @@ class LiveStore {
       }
     }
   };
+
+  private scheduleChampionshipRefetch() {
+    if (typeof window === "undefined" || !this.client) return;
+    if (this.champTimer !== null) {
+      window.clearTimeout(this.champTimer);
+    }
+    this.champTimer = window.setTimeout(async () => {
+      this.champTimer = null;
+      if (!this.client) return;
+      try {
+        const cRes = await this.client.from("championship_standings").select("*");
+        if (!cRes.error && cRes.data) {
+          this.setState({
+            championshipStandings: cRes.data as ChampionshipStanding[],
+          });
+        }
+      } catch {
+        /* ignore */
+      }
+    }, 1_000);
+  }
 
   private scheduleStandingsRefetch() {
     if (typeof window === "undefined" || !this.client) return;
@@ -335,6 +383,28 @@ class LiveStore {
             payload.eventType,
             payload.new as Team | undefined,
             payload.old as Partial<Team> | undefined,
+          );
+        },
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "podiums" },
+        (payload) => {
+          this.applyPodiumChange(
+            payload.eventType,
+            payload.new as Podium | undefined,
+            payload.old as Partial<Podium> | undefined,
+          );
+        },
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "brackets" },
+        (payload) => {
+          this.applyBracketChange(
+            payload.eventType,
+            payload.new as BracketRecord | undefined,
+            payload.old as Partial<BracketRecord> | undefined,
           );
         },
       )
@@ -451,6 +521,48 @@ class LiveStore {
       lastUpdated: new Date().toISOString(),
     });
     this.scheduleStandingsRefetch();
+  }
+
+  private applyPodiumChange(
+    eventType: string,
+    next?: Podium,
+    old?: Partial<Podium>,
+  ) {
+    let list = this.state.podiums.slice();
+    if (eventType === "INSERT" && next) {
+      list = [next, ...list.filter((p) => p.id !== next.id)];
+    } else if (eventType === "UPDATE" && next) {
+      const idx = list.findIndex((p) => p.id === next.id);
+      if (idx >= 0) list[idx] = next;
+      else list.unshift(next);
+    } else if (eventType === "DELETE" && old?.id) {
+      list = list.filter((p) => p.id !== old.id);
+    }
+    this.setState({
+      podiums: list,
+      lastUpdated: new Date().toISOString(),
+    });
+    this.scheduleChampionshipRefetch();
+  }
+
+  private applyBracketChange(
+    eventType: string,
+    next?: BracketRecord,
+    old?: Partial<BracketRecord>,
+  ) {
+    let list = this.state.brackets.slice();
+    if ((eventType === "INSERT" || eventType === "UPDATE") && next) {
+      const idx = list.findIndex((b) => b.event === next.event);
+      if (idx >= 0) list[idx] = next;
+      else list.push(next);
+    } else if (eventType === "DELETE" && old?.event) {
+      list = list.filter((b) => b.event !== old.event);
+    }
+    list.sort((a, b) => a.event.localeCompare(b.event));
+    this.setState({
+      brackets: list,
+      lastUpdated: new Date().toISOString(),
+    });
   }
 
   private applyAnnouncementChange(
