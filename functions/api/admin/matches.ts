@@ -596,15 +596,36 @@ export async function onRequest(context: PagesContext): Promise<Response> {
     try {
       const prevRes = await supabaseFetch(
         cfg,
-        `matches?id=eq.${encodeURIComponent(id)}&select=id,status,round,event,team_a,team_b,venue,result`,
+        `matches?id=eq.${encodeURIComponent(id)}&select=id,status,round,event,team_a,team_b,team_a_id,team_b_id,venue,result`,
       );
       const prevRows = prevRes.ok
         ? ((await prevRes.json()) as Array<Record<string, unknown>>)
         : [];
+      const prevRow = prevRows[0] ?? null;
       const prevStatus =
-        prevRows.length && typeof prevRows[0].status === "string"
-          ? prevRows[0].status
-          : null;
+        prevRow && typeof prevRow.status === "string" ? prevRow.status : null;
+
+      const effectiveTeamAId =
+        "team_a_id" in res.data
+          ? res.data.team_a_id
+          : (prevRow?.team_a_id ?? null);
+      const effectiveTeamBId =
+        "team_b_id" in res.data
+          ? res.data.team_b_id
+          : (prevRow?.team_b_id ?? null);
+      if (
+        res.data.status === "finished" &&
+        (effectiveTeamAId || effectiveTeamBId)
+      ) {
+        return adminJsonResponse(
+          {
+            ok: false,
+            error:
+              "Matches with linked teams must be finished via POST ?id=...&action=finish so a winner is recorded.",
+          },
+          400,
+        );
+      }
 
       const idsToResolve: string[] = [];
       if (typeof res.data.team_a_id === "string") idsToResolve.push(res.data.team_a_id);
