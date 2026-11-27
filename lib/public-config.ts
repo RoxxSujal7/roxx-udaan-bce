@@ -10,4 +10,5 @@ export const NTFY_PUBLIC_TOPIC = "udaan26-bce-XXXXXXXXXX";
 
 export const FEATURES = {
   phonePush: true,
+  standings: true,
 } as const;

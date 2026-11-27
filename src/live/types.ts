@@ -5,6 +5,49 @@ export type MatchStatus =
   | "postponed"
   | "cancelled";
 
+export type MatchRound = "league" | "QF" | "SF" | "3P" | "F";
+
+export type Department = "CSE" | "ECE" | "EE" | "ME" | "CE" | "Other";
+
+export interface Team {
+  id: string;
+  event: string;
+  name: string;
+  department: Department;
+  group_label: string | null;
+  created_at: string;
+}
+
+export interface TeamStanding {
+  team_id: string;
+  team_name: string;
+  department: Department;
+  event: string;
+  group_label: string | null;
+  played: number;
+  wins: number;
+  losses: number;
+  scored: number;
+  conceded: number;
+  difference: number;
+  points: number;
+}
+
+export interface TeamHistoryEntry {
+  team_id: string;
+  match_id: string;
+  event: string;
+  round: MatchRound;
+  stage: string | null;
+  starts_at: string;
+  venue: string;
+  opponent: string | null;
+  own_score: string | null;
+  opp_score: string | null;
+  outcome: "W" | "L";
+  result: string | null;
+}
+
 export interface Match {
   id: string;
   event: string;
@@ -12,6 +55,13 @@ export interface Match {
   stage: string | null;
   team_a: string | null;
   team_b: string | null;
+  team_a_id?: string | null;
+  team_b_id?: string | null;
+  group_label?: string | null;
+  round?: MatchRound;
+  points_a?: number | null;
+  points_b?: number | null;
+  winner_id?: string | null;
   venue: string;
   starts_at: string;
   status: MatchStatus;

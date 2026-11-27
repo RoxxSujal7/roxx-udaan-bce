@@ -9,6 +9,9 @@ import type {
   Announcement,
   LiveConnectionState,
   Match,
+  Team,
+  TeamHistoryEntry,
+  TeamStanding,
 } from "@/src/live/types";
 import type { ChangelogEntry } from "@/components/ui/changelog-timeline";
 
@@ -131,6 +134,8 @@ export function buildFeed(
 interface LiveState {
   matches: Match[];
   announcements: Announcement[];
+  teams: Team[];
+  standings: TeamStanding[];
   connection: LiveConnectionState;
   lastUpdated: string | null;
   loaded: boolean;
@@ -142,6 +147,8 @@ class LiveStore {
   private state: LiveState = {
     matches: [],
     announcements: [],
+    teams: [],
+    standings: [],
     connection: "connecting",
     lastUpdated: null,
     loaded: false,
@@ -151,6 +158,7 @@ class LiveStore {
   private channel: RealtimeChannel | null = null;
   private pollTimer: number | null = null;
   private retryTimer: number | null = null;
+  private standingsTimer: number | null = null;
   private retryDelayMs = 5_000;
   private started = false;
 
@@ -232,7 +240,7 @@ class LiveStore {
   refetch = async (): Promise<void> => {
     if (!this.client) return;
     try {
-      const [mRes, aRes] = await Promise.all([
+      const [mRes, aRes, tRes, sRes] = await Promise.all([
         this.client
           .from("matches")
           .select("*")
@@ -242,11 +250,18 @@ class LiveStore {
           .select("*")
           .order("created_at", { ascending: false })
           .limit(50),
+        this.client.from("teams").select("*").order("name", { ascending: true }),
+        this.client.from("team_standings").select("*"),
       ]);
       if (!mRes.error && !aRes.error) {
         this.setState({
           matches: (mRes.data as Match[]) ?? [],
           announcements: (aRes.data as Announcement[]) ?? [],
+          teams: !tRes.error && tRes.data ? (tRes.data as Team[]) : this.state.teams,
+          standings:
+            !sRes.error && sRes.data
+              ? (sRes.data as TeamStanding[])
+              : this.state.standings,
           lastUpdated: new Date().toISOString(),
           loaded: true,
         });
@@ -257,6 +272,25 @@ class LiveStore {
       }
     }
   };
+
+  private scheduleStandingsRefetch() {
+    if (typeof window === "undefined" || !this.client) return;
+    if (this.standingsTimer !== null) {
+      window.clearTimeout(this.standingsTimer);
+    }
+    this.standingsTimer = window.setTimeout(async () => {
+      this.standingsTimer = null;
+      if (!this.client) return;
+      try {
+        const sRes = await this.client.from("team_standings").select("*");
+        if (!sRes.error && sRes.data) {
+          this.setState({ standings: sRes.data as TeamStanding[] });
+        }
+      } catch {
+        /* ignore */
+      }
+    }, 1_000);
+  }
 
   private connectRealtime() {
     if (!this.client || this.channel || document.visibilityState !== "visible") {
@@ -290,6 +324,17 @@ class LiveStore {
             payload.eventType,
             payload.new as Announcement | undefined,
             payload.old as Partial<Announcement> | undefined,
+          );
+        },
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "teams" },
+        (payload) => {
+          this.applyTeamChange(
+            payload.eventType,
+            payload.new as Team | undefined,
+            payload.old as Partial<Team> | undefined,
           );
         },
       )
@@ -382,6 +427,30 @@ class LiveStore {
       matches: list,
       lastUpdated: new Date().toISOString(),
     });
+    this.scheduleStandingsRefetch();
+  }
+
+  private applyTeamChange(
+    eventType: string,
+    next?: Team,
+    old?: Partial<Team>,
+  ) {
+    let list = this.state.teams.slice();
+    if (eventType === "INSERT" && next) {
+      if (!list.some((t) => t.id === next.id)) list.push(next);
+    } else if (eventType === "UPDATE" && next) {
+      const idx = list.findIndex((t) => t.id === next.id);
+      if (idx >= 0) list[idx] = next;
+      else list.push(next);
+    } else if (eventType === "DELETE" && old?.id) {
+      list = list.filter((t) => t.id !== old.id);
+    }
+    list.sort((a, b) => a.name.localeCompare(b.name));
+    this.setState({
+      teams: list,
+      lastUpdated: new Date().toISOString(),
+    });
+    this.scheduleStandingsRefetch();
   }
 
   private applyAnnouncementChange(
@@ -428,6 +497,26 @@ function getLiveStore(): LiveStore {
     window.__udaanLive = new LiveStore();
   }
   return window.__udaanLive;
+}
+
+export async function fetchTeamHistory(
+  teamId: string,
+): Promise<TeamHistoryEntry[]> {
+  const store = getLiveStore();
+  // @ts-expect-error access private client for view query
+  const client = store.client as SupabaseClient | null;
+  if (!client) return [];
+  try {
+    const res = await client
+      .from("team_history")
+      .select("*")
+      .eq("team_id", teamId)
+      .order("starts_at", { ascending: false });
+    if (res.error || !res.data) return [];
+    return res.data as TeamHistoryEntry[];
+  } catch {
+    return [];
+  }
 }
 
 export function useLiveData() {
