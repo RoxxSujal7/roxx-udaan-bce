@@ -620,9 +620,13 @@ export function LiveBoard() {
         <BracketsSection brackets={brackets} />
       ) : (
         <>
-      {/* Empty state */}
-      {loaded && visibleMatches.length === 0 && (
-        <div className="mb-8 rounded-2xl border border-white/10 bg-[#141414] p-8 text-center">
+      {/* Empty / Loading state (reserved height prevents CLS when matches load empty) */}
+      {!loaded && visibleMatches.length === 0 ? (
+        <div className="mb-8 flex min-h-[260px] items-center justify-center rounded-2xl border border-white/10 bg-[#141414]/60 p-8 text-center text-sm text-zinc-400">
+          Loading live schedule…
+        </div>
+      ) : loaded && visibleMatches.length === 0 ? (
+        <div className="mb-8 flex min-h-[260px] flex-col items-center justify-center rounded-2xl border border-white/10 bg-[#141414] p-8 text-center">
           <Trophy className="mx-auto mb-3 size-8 text-[#ff6b2b]" />
           <h3 className="text-lg font-semibold text-white">
             No matches posted yet
@@ -637,7 +641,7 @@ export function LiveBoard() {
             Register for UDAAN 2026
           </a>
         </div>
-      )}
+      ) : null}
 
       {/* Main responsive grid: Desktop = left (Live+Schedule+Results) + right (Live feed); Mobile = Live -> Live feed -> Schedule -> Results */}
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_400px] xl:grid-cols-[minmax(0,1fr)_440px]">
