@@ -1,10 +1,21 @@
 @import "tailwindcss/theme.css";
 @import "tailwindcss/utilities.css";
 
+@custom-variant dark (&:where(#live-board-root, #live-board-root *, .dark, .dark *));
+
 @source "../src/live-entry.tsx";
 @source "../src/live/live-board.tsx";
 @source "../src/live/championship-view.tsx";
 @source "../components/ui/changelog-timeline.tsx";
+@source "../components/ui/leaderboard-podium.tsx";
+@source "../components/ui/leaderboard-table.tsx";
+@source "../components/ui/leaderboard-table-utils/data-table.tsx";
+
+@theme {
+  --color-rank-1: #f59e0b;
+  --color-rank-2: #a1a1aa;
+  --color-rank-3: #d97706;
+}
 
 /* Scoped reset for ChangelogTimeline on a no-Preflight page */
 @layer base {
@@ -36,6 +47,9 @@
     box-sizing: border-box;
   }
   #live-board-root button {
+    background: transparent;
+    border: 0 solid;
+    color: inherit;
     font-family: inherit;
   }
 }

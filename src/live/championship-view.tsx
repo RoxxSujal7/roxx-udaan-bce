@@ -3,6 +3,9 @@
 import * as React from "react";
 import { Award, Medal, Trophy } from "lucide-react";
 
+import { LeaderboardPodium } from "@/components/ui/leaderboard-podium";
+import { LeaderboardTable } from "@/components/ui/leaderboard-table";
+import { adaptChampionshipToLeaderboard } from "@/src/live/leaderboard-adapter";
 import type {
   BracketRecord,
   ChampionshipStanding,
@@ -60,9 +63,10 @@ export function ChampionshipSection({
     [standings, scope],
   );
 
-  const first = rows[0] ?? null;
-  const second = rows[1] ?? null;
-  const third = rows[2] ?? null;
+  const dataset = React.useMemo(
+    () => adaptChampionshipToLeaderboard(rows),
+    [rows],
+  );
 
   return (
     <div className="flex flex-col gap-6">
@@ -113,95 +117,26 @@ export function ChampionshipSection({
         </div>
       ) : (
         <>
-          {/* Top-3 Podium Graphic */}
-          <div className="grid grid-cols-3 items-end gap-3 rounded-2xl border border-white/10 bg-[#141414] p-4 sm:p-6">
-            {/* 2nd place (Silver) */}
-            <div className="flex flex-col items-center text-center">
-              <span className="text-xs font-semibold text-zinc-300">
-                {second ? second.department : "—"}
-              </span>
-              <span className="mt-0.5 font-mono text-xs text-zinc-400">
-                {second ? `${second.points} pts` : ""}
-              </span>
-              <div className="mt-2 flex h-20 w-full items-center justify-center rounded-t-xl border border-zinc-400/30 bg-zinc-400/15 font-mono text-lg font-bold text-zinc-200">
-                🥈 2
-              </div>
-            </div>
-
-            {/* 1st place (Gold) */}
-            <div className="flex flex-col items-center text-center">
-              <span className="text-sm font-bold text-[#ff6b2b]">
-                {first ? first.department : "—"}
-              </span>
-              <span className="mt-0.5 font-mono text-xs text-amber-200">
-                {first ? `${first.points} pts` : ""}
-              </span>
-              <div className="mt-2 flex h-28 w-full items-center justify-center rounded-t-xl border border-[#ff6b2b]/50 bg-[#ff6b2b]/20 font-mono text-xl font-bold text-amber-300">
-                🥇 1
-              </div>
-            </div>
-
-            {/* 3rd place (Bronze) */}
-            <div className="flex flex-col items-center text-center">
-              <span className="text-xs font-semibold text-zinc-300">
-                {third ? third.department : "—"}
-              </span>
-              <span className="mt-0.5 font-mono text-xs text-zinc-400">
-                {third ? `${third.points} pts` : ""}
-              </span>
-              <div className="mt-2 flex h-14 w-full items-center justify-center rounded-t-xl border border-amber-700/40 bg-amber-700/15 font-mono text-base font-bold text-amber-400">
-                🥉 3
-              </div>
-            </div>
+          <div className="rounded-2xl border border-white/10 bg-[#141414] p-4 sm:p-6">
+            <LeaderboardPodium
+              rankings={dataset.podiumRankings}
+              showAvatar={false}
+              medalStyle="classic"
+            />
           </div>
 
-          {/* Full Department Leaderboard Table */}
-          <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#141414]">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs sm:text-sm">
-                <thead>
-                  <tr className="border-b border-white/10 text-zinc-400">
-                    <th className="px-4 py-3 font-medium">Dept</th>
-                    <th className="px-3 py-3 text-center font-medium">🥇</th>
-                    <th className="px-3 py-3 text-center font-medium">🥈</th>
-                    <th className="px-3 py-3 text-center font-medium">🥉</th>
-                    <th className="px-4 py-3 text-right font-bold text-white">
-                      Pts
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.map((r, idx) => (
-                    <tr
-                      key={r.department}
-                      className={`border-b border-white/5 last:border-none ${
-                        idx === 0 ? "bg-[#ff6b2b]/10" : ""
-                      }`}
-                    >
-                      <td className="px-4 py-3 font-semibold text-white">
-                        <span className="mr-2 text-xs text-zinc-400">
-                          {idx + 1}.
-                        </span>
-                        {r.department}
-                      </td>
-                      <td className="px-3 py-3 text-center tabular-nums text-amber-300">
-                        {r.gold}
-                      </td>
-                      <td className="px-3 py-3 text-center tabular-nums text-zinc-300">
-                        {r.silver}
-                      </td>
-                      <td className="px-3 py-3 text-center tabular-nums text-amber-500">
-                        {r.bronze}
-                      </td>
-                      <td className="px-4 py-3 text-right font-mono font-bold tabular-nums text-[#ff6b2b]">
-                        {r.points}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
+          <LeaderboardTable
+            players={dataset.tablePlayers}
+            title={
+              scope === "udaan"
+                ? "UDAAN Overall Standings"
+                : "IGNITION Esports Standings"
+            }
+            caption="Department championship rankings by points and medals."
+            entityHeader={dataset.entityHeader}
+            scoreHeader={dataset.scoreHeader}
+            className="w-full"
+          />
         </>
       )}
 

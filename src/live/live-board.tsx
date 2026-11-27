@@ -11,8 +11,25 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { getEventGroup } from "@/lib/events";
+import {
+  getEventGroup,
+  IGNITION_ESPORTS_EVENTS,
+  UDAAN_SPORTS_AND_CULTURAL_EVENTS,
+} from "@/lib/events";
 import { FEATURES, NTFY_PUBLIC_TOPIC } from "@/lib/public-config";
+import { LeaderboardPodium } from "@/components/ui/leaderboard-podium";
+import { LeaderboardTable } from "@/components/ui/leaderboard-table";
+import {
+  adaptPodiumsToLeaderboard,
+  adaptTeamStandingsToLeaderboard,
+  isIndividualEvent,
+} from "@/src/live/leaderboard-adapter";
+import {
+  DEMO_CHAMPIONSHIP_STANDINGS,
+  DEMO_PODIUMS,
+  DEMO_TEAM_STANDINGS,
+  isLocalDemoMode,
+} from "@/src/live/demo-data";
 import {
   BracketsSection,
   ChampionshipSection,
@@ -28,6 +45,7 @@ import {
 import type {
   LiveConnectionState,
   Match,
+  Podium,
   TeamHistoryEntry,
   TeamStanding,
 } from "@/src/live/types";
@@ -455,7 +473,24 @@ export function LiveBoard() {
         <p className="text-sm text-zinc-400">
           27–30 Nov 2026 · Instant scores &amp; schedule
         </p>
-        <ConnectionPill state={connection} />
+        <div className="flex flex-wrap items-center gap-2">
+          {FEATURES.standings && (
+            <button
+              type="button"
+              onClick={() => setActiveTab("standings")}
+              aria-pressed={activeTab === "standings"}
+              className={`inline-flex min-h-8 cursor-pointer items-center gap-1.5 rounded-full border px-3.5 py-1 text-xs font-semibold transition-colors ${
+                activeTab === "standings"
+                  ? "border-[#ff6b2b] bg-[#ff6b2b] text-black"
+                  : "border-[#ff6b2b]/40 bg-[#ff6b2b]/15 text-[#ff6b2b] hover:bg-[#ff6b2b] hover:text-black"
+              }`}
+            >
+              <Trophy className="size-3.5" />
+              Leaderboard
+            </button>
+          )}
+          <ConnectionPill state={connection} />
+        </div>
       </div>
 
       {/* View tabs (Live & Schedule | Standings | Championship | Brackets) */}
@@ -526,44 +561,60 @@ export function LiveBoard() {
         </div>
       )}
 
-      {/* Filter chips */}
-      <div
-        className="mb-6 flex flex-wrap gap-2"
-        role="tablist"
-        aria-label="Filter matches by event"
-      >
-        {eventChips.map((chip) => {
-          const selected = activeFilter === chip;
-          return (
-            <button
-              key={chip}
-              type="button"
-              role="tab"
-              aria-selected={selected}
-              onClick={() => handleSelectFilter(chip)}
-              className={`min-h-9 cursor-pointer rounded-full border px-3.5 py-1.5 text-xs font-medium transition-colors ${
-                selected
-                  ? "border-[#ff6b2b] bg-[#ff6b2b] text-black font-semibold"
-                  : "border-white/15 bg-[#141414] text-zinc-300 hover:border-white/30"
-              }`}
-            >
-              {chip}
-            </button>
-          );
-        })}
-      </div>
+      {/* Filter chips (for Live & Schedule) */}
+      {activeTab === "scores" && (
+        <div
+          className="mb-6 flex flex-wrap gap-2"
+          role="tablist"
+          aria-label="Filter matches by event"
+        >
+          {eventChips.map((chip) => {
+            const selected = activeFilter === chip;
+            return (
+              <button
+                key={chip}
+                type="button"
+                role="tab"
+                aria-selected={selected}
+                onClick={() => handleSelectFilter(chip)}
+                className={`min-h-9 cursor-pointer rounded-full border px-3.5 py-1.5 text-xs font-medium transition-colors ${
+                  selected
+                    ? "border-[#ff6b2b] bg-[#ff6b2b] text-black font-semibold"
+                    : "border-white/15 bg-[#141414] text-zinc-300 hover:border-white/30"
+                }`}
+              >
+                {chip}
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {/* Standings / Championship / Brackets Views */}
       {FEATURES.standings && activeTab === "standings" ? (
         <StandingsSection
-          standings={standings}
+          standings={
+            isLocalDemoMode() && standings.length === 0
+              ? DEMO_TEAM_STANDINGS
+              : standings
+          }
+          podiums={
+            isLocalDemoMode() && podiums.length === 0 ? DEMO_PODIUMS : podiums
+          }
+          loaded={isLocalDemoMode() ? true : loaded}
           activeFilter={activeFilter}
           onSelectTeam={handleSelectTeam}
         />
       ) : FEATURES.championship && activeTab === "championship" ? (
         <ChampionshipSection
-          standings={championshipStandings}
-          podiums={podiums}
+          standings={
+            isLocalDemoMode() && championshipStandings.length === 0
+              ? DEMO_CHAMPIONSHIP_STANDINGS
+              : championshipStandings
+          }
+          podiums={
+            isLocalDemoMode() && podiums.length === 0 ? DEMO_PODIUMS : podiums
+          }
         />
       ) : FEATURES.brackets && activeTab === "brackets" ? (
         <BracketsSection brackets={brackets} />
@@ -717,129 +768,246 @@ export function LiveBoard() {
 
 function StandingsSection({
   standings,
+  podiums,
+  loaded,
   activeFilter,
   onSelectTeam,
 }: {
   standings: TeamStanding[];
+  podiums: Podium[];
+  loaded: boolean;
   activeFilter: string;
   onSelectTeam: (teamId: string | null | undefined, name: string) => void;
 }) {
-  const filtered = React.useMemo(() => {
-    if (activeFilter === "All") return standings;
-    if (activeFilter === "UDAAN") {
-      return standings.filter((s) => getEventGroup(s.event) === "UDAAN");
+  const isIgnitionFilter =
+    activeFilter === "IGNITION" || getEventGroup(activeFilter) === "IGNITION";
+
+  const [track, setTrack] = React.useState<"UDAAN" | "IGNITION">(
+    isIgnitionFilter ? "IGNITION" : "UDAAN",
+  );
+  const [selectedEvent, setSelectedEvent] = React.useState<string>(() => {
+    if (
+      activeFilter !== "All" &&
+      activeFilter !== "UDAAN" &&
+      activeFilter !== "IGNITION"
+    ) {
+      return activeFilter;
     }
+    return isIgnitionFilter
+      ? IGNITION_ESPORTS_EVENTS[0]
+      : UDAAN_SPORTS_AND_CULTURAL_EVENTS[0];
+  });
+  const [selectedGroup, setSelectedGroup] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
     if (activeFilter === "IGNITION") {
-      return standings.filter((s) => getEventGroup(s.event) === "IGNITION");
-    }
-    return standings.filter((s) => s.event === activeFilter);
-  }, [standings, activeFilter]);
-
-  const tables = React.useMemo(() => {
-    const map = new Map<string, { event: string; group: string | null; rows: TeamStanding[] }>();
-    for (const row of filtered) {
-      const key = `${row.event}::${row.group_label ?? ""}`;
-      if (!map.has(key)) {
-        map.set(key, { event: row.event, group: row.group_label, rows: [] });
+      setTrack("IGNITION");
+      if (getEventGroup(selectedEvent) !== "IGNITION") {
+        setSelectedEvent(IGNITION_ESPORTS_EVENTS[0]);
       }
-      map.get(key)!.rows.push(row);
+      setSelectedGroup(null);
+    } else if (activeFilter === "UDAAN") {
+      setTrack("UDAAN");
+      if (getEventGroup(selectedEvent) !== "UDAAN") {
+        setSelectedEvent(UDAAN_SPORTS_AND_CULTURAL_EVENTS[0]);
+      }
+      setSelectedGroup(null);
+    } else if (activeFilter !== "All") {
+      setTrack(getEventGroup(activeFilter) === "IGNITION" ? "IGNITION" : "UDAAN");
+      setSelectedEvent(activeFilter);
+      setSelectedGroup(null);
     }
-    for (const entry of map.values()) {
-      entry.rows.sort((a, b) => {
-        if (b.points !== a.points) return b.points - a.points;
-        if (b.difference !== a.difference) return b.difference - a.difference;
-        if (b.scored !== a.scored) return b.scored - a.scored;
-        return a.team_name.localeCompare(b.team_name);
-      });
-    }
-    return Array.from(map.values()).sort((a, b) =>
-      `${a.event}${a.group ?? ""}`.localeCompare(`${b.event}${b.group ?? ""}`),
-    );
-  }, [filtered]);
+  }, [activeFilter]);
 
-  if (tables.length === 0) {
-    return (
-      <div className="rounded-2xl border border-white/10 bg-[#141414] p-8 text-center">
-        <Trophy className="mx-auto mb-3 size-8 text-[#ff6b2b]" />
-        <h3 className="text-base font-semibold text-white">No standings yet</h3>
-        <p className="mt-1 text-sm text-zinc-400">
-          League standings appear here once teams and finished matches are posted.
-        </p>
-      </div>
-    );
-  }
+  const eventOptions =
+    track === "IGNITION"
+      ? IGNITION_ESPORTS_EVENTS
+      : UDAAN_SPORTS_AND_CULTURAL_EVENTS;
+
+  const eventStandings = React.useMemo(
+    () => standings.filter((s) => s.event === selectedEvent),
+    [standings, selectedEvent],
+  );
+
+  const availableGroups = React.useMemo(() => {
+    const set = new Set<string>();
+    for (const s of eventStandings) {
+      if (s.group_label) set.add(s.group_label);
+    }
+    return Array.from(set).sort();
+  }, [eventStandings]);
+
+  const activeGroup =
+    selectedGroup && availableGroups.includes(selectedGroup)
+      ? selectedGroup
+      : null;
+
+  const hasTeamStandings = eventStandings.length > 0;
+  const dataset = React.useMemo(() => {
+    if (hasTeamStandings) {
+      return adaptTeamStandingsToLeaderboard(
+        standings,
+        selectedEvent,
+        activeGroup ?? undefined,
+      );
+    }
+    return adaptPodiumsToLeaderboard(podiums, selectedEvent);
+  }, [hasTeamStandings, standings, podiums, selectedEvent, activeGroup]);
 
   return (
-    <div className="grid gap-6 md:grid-cols-2">
-      {tables.map((t) => (
-        <div
-          key={`${t.event}-${t.group ?? "all"}`}
-          className="overflow-hidden rounded-2xl border border-white/10 bg-[#141414]"
-        >
-          <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
-            <h3 className="text-sm font-bold uppercase tracking-wider text-white">
-              {t.event}
-              {t.group ? ` · ${t.group}` : ""}
-            </h3>
-            <span className="text-[11px] text-zinc-400">Top 2 advance</span>
+    <div className="flex flex-col gap-6">
+      {/* Track & Sport / IGNITION Game selector */}
+      <div className="flex flex-col gap-3 rounded-2xl border border-white/10 bg-[#141414] p-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex gap-2" role="tablist" aria-label="Leaderboard track">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={track === "UDAAN"}
+              onClick={() => {
+                setTrack("UDAAN");
+                setSelectedEvent(UDAAN_SPORTS_AND_CULTURAL_EVENTS[0]);
+                setSelectedGroup(null);
+              }}
+              className={`min-h-9 cursor-pointer rounded-full border px-4 py-1.5 text-xs font-semibold transition-colors ${
+                track === "UDAAN"
+                  ? "border-[#ff6b2b] bg-[#ff6b2b] text-black"
+                  : "border-white/15 bg-[#0d0d0d] text-zinc-300 hover:border-white/30"
+              }`}
+            >
+              UDAAN Sports
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={track === "IGNITION"}
+              onClick={() => {
+                setTrack("IGNITION");
+                setSelectedEvent(IGNITION_ESPORTS_EVENTS[0]);
+                setSelectedGroup(null);
+              }}
+              className={`min-h-9 cursor-pointer rounded-full border px-4 py-1.5 text-xs font-semibold transition-colors ${
+                track === "IGNITION"
+                  ? "border-[#ff6b2b] bg-[#ff6b2b] text-black"
+                  : "border-white/15 bg-[#0d0d0d] text-zinc-300 hover:border-white/30"
+              }`}
+            >
+              IGNITION Esports
+            </button>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead>
-                <tr className="border-b border-white/10 text-zinc-400">
-                  <th className="px-3 py-2.5 font-medium">Team</th>
-                  <th className="px-2 py-2.5 text-center font-medium">P</th>
-                  <th className="px-2 py-2.5 text-center font-medium">W</th>
-                  <th className="px-2 py-2.5 text-center font-medium">L</th>
-                  <th className="px-2 py-2.5 text-center font-medium">+/-</th>
-                  <th className="px-3 py-2.5 text-right font-bold text-white">Pts</th>
-                </tr>
-              </thead>
-              <tbody>
-                {t.rows.map((r, idx) => {
-                  const topTwo = idx < 2;
-                  return (
-                    <tr
-                      key={r.team_id}
-                      className={`border-b border-white/5 last:border-none ${
-                        topTwo ? "bg-[#ff6b2b]/10" : ""
-                      }`}
-                    >
-                      <td className="px-3 py-2.5 font-medium text-white">
-                        <button
-                          type="button"
-                          onClick={() => onSelectTeam(r.team_id, r.team_name)}
-                          className="text-left hover:text-[#ff6b2b] cursor-pointer"
-                        >
-                          <span className="mr-1.5 text-[10px] text-zinc-400">
-                            {idx + 1}.
-                          </span>
-                          {r.team_name}
-                        </button>
-                      </td>
-                      <td className="px-2 py-2.5 text-center tabular-nums text-zinc-300">
-                        {r.played}
-                      </td>
-                      <td className="px-2 py-2.5 text-center tabular-nums text-emerald-300">
-                        {r.wins}
-                      </td>
-                      <td className="px-2 py-2.5 text-center tabular-nums text-zinc-400">
-                        {r.losses}
-                      </td>
-                      <td className="px-2 py-2.5 text-center tabular-nums text-zinc-300">
-                        {r.difference > 0 ? `+${r.difference}` : r.difference}
-                      </td>
-                      <td className="px-3 py-2.5 text-right font-mono font-bold tabular-nums text-[#ff6b2b]">
-                        {r.points}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+          <span className="text-xs text-zinc-400">
+            {isIndividualEvent(selectedEvent)
+              ? "Individual Competition"
+              : "Team Competition"}
+          </span>
         </div>
-      ))}
+
+        <div
+          className="flex flex-wrap gap-1.5"
+          role="tablist"
+          aria-label={
+            track === "IGNITION" ? "Select IGNITION game" : "Select UDAAN sport"
+          }
+        >
+          {eventOptions.map((ev) => {
+            const active = selectedEvent === ev;
+            return (
+              <button
+                key={ev}
+                type="button"
+                role="tab"
+                aria-selected={active}
+                onClick={() => {
+                  setSelectedEvent(ev);
+                  setSelectedGroup(null);
+                }}
+                className={`min-h-8 cursor-pointer rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                  active
+                    ? "border-[#ff6b2b] bg-[#ff6b2b]/20 text-[#ff6b2b] font-semibold"
+                    : "border-white/10 bg-[#0d0d0d] text-zinc-300 hover:border-white/25"
+                }`}
+              >
+                {ev}
+              </button>
+            );
+          })}
+        </div>
+
+        {availableGroups.length > 0 && (
+          <div className="flex flex-wrap items-center gap-1.5 pt-1">
+            <span className="mr-1 text-[11px] uppercase tracking-wider text-zinc-400">
+              Group:
+            </span>
+            <button
+              type="button"
+              onClick={() => setSelectedGroup(null)}
+              className={`min-h-7 cursor-pointer rounded-full border px-2.5 py-0.5 text-[11px] font-medium ${
+                activeGroup === null
+                  ? "border-white/40 bg-white/15 text-white"
+                  : "border-white/10 text-zinc-400 hover:text-white"
+              }`}
+            >
+              All
+            </button>
+            {availableGroups.map((grp) => (
+              <button
+                key={grp}
+                type="button"
+                onClick={() => setSelectedGroup(grp)}
+                className={`min-h-7 cursor-pointer rounded-full border px-2.5 py-0.5 text-[11px] font-medium ${
+                  activeGroup === grp
+                    ? "border-white/40 bg-white/15 text-white"
+                    : "border-white/10 text-zinc-400 hover:text-white"
+                }`}
+              >
+                {grp}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Synchronized LeaderboardPodium + LeaderboardTable */}
+      {!loaded ? (
+        <div className="flex min-h-[200px] items-center justify-center rounded-2xl border border-white/10 bg-[#141414] p-8 text-center text-sm text-zinc-400">
+          Loading {selectedEvent} leaderboard…
+        </div>
+      ) : dataset.tablePlayers.length === 0 ? (
+        <div className="flex min-h-[200px] flex-col items-center justify-center rounded-2xl border border-white/10 bg-[#141414] p-8 text-center">
+          <Trophy className="mx-auto mb-3 size-8 text-[#ff6b2b]" />
+          <h3 className="text-base font-semibold text-white">
+            No {selectedEvent} rankings yet
+          </h3>
+          <p className="mt-1 text-sm text-zinc-400">
+            Rankings for {selectedEvent} appear here once teams and finished
+            matches or podium results are recorded.
+          </p>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-6">
+          <div className="rounded-2xl border border-white/10 bg-[#141414] p-4 sm:p-6">
+            <LeaderboardPodium
+              rankings={dataset.podiumRankings}
+              showAvatar={false}
+              medalStyle="classic"
+            />
+          </div>
+
+          <LeaderboardTable
+            players={dataset.tablePlayers}
+            title={`${selectedEvent}${activeGroup ? ` · ${activeGroup}` : ""} Leaderboard`}
+            caption={`${selectedEvent} rankings with medals and points.`}
+            entityHeader={dataset.entityHeader}
+            scoreHeader={dataset.scoreHeader}
+            onSelectPlayer={
+              hasTeamStandings
+                ? (player) => onSelectTeam(player.id, player.name)
+                : undefined
+            }
+            className="w-full"
+          />
+        </div>
+      )}
     </div>
   );
 }
