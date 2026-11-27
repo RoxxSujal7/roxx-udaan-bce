@@ -191,7 +191,10 @@ export function LiveControl({ adminPassword }: LiveControlProps) {
     }
     setPostingAnn(true);
     const expiryVal = annExpiry === "none" ? null : Number(annExpiry);
-    const res = await apiCall<{ announcement: Announcement }>(
+    const res = await apiCall<{
+      announcement: Announcement;
+      push?: "sent" | "skipped" | "failed";
+    }>(
       "/api/admin/announcements",
       "POST",
       {
@@ -206,7 +209,15 @@ export function LiveControl({ adminPassword }: LiveControlProps) {
       setAnnouncementsOptimistic((prev) => [res.data.announcement, ...prev]);
       setAnnMsg("");
       setAnnLink("");
-      toast.success("Announcement posted.");
+      if (annLevel === "urgent" || annLevel === "important") {
+        toast.success(
+          res.data.push === "sent"
+            ? "Posted · phone push sent"
+            : "Posted · push skipped",
+        );
+      } else {
+        toast.success("Announcement posted.");
+      }
     } else {
       toast.error(res.error);
     }

@@ -1,10 +1,12 @@
 "use client";
 
 import * as React from "react";
-import { CalendarClock, MapPin, Radio, Trophy, WifiOff } from "lucide-react";
+import { BellRing, CalendarClock, ExternalLink, MapPin, Radio, Smartphone, Trophy, WifiOff } from "lucide-react";
 
 import { ChangelogTimeline } from "@/components/ui/changelog-timeline";
 import { getEventGroup } from "@/lib/events";
+import { FEATURES, NTFY_PUBLIC_TOPIC } from "@/lib/public-config";
+import { QrCodeSvg } from "@/src/live/qr-code";
 import {
   buildFeed,
   formatISTShortTime,
@@ -442,7 +444,7 @@ export function LiveBoard() {
         </div>
 
         {/* Right column on desktop / directly below Live now on mobile */}
-        <aside className="order-2 lg:order-none lg:sticky lg:top-20 lg:self-start">
+        <aside className="order-2 flex flex-col gap-6 lg:order-none lg:sticky lg:top-20 lg:self-start">
           <ChangelogTimeline
             entries={feedEntries}
             title="Live feed"
@@ -454,8 +456,89 @@ export function LiveBoard() {
               deployedAt: lastUpdated ?? undefined,
             }}
           />
+
+          {FEATURES.phonePush && NTFY_PUBLIC_TOPIC.trim() !== "" && (
+            <PhoneAlertsCard topic={NTFY_PUBLIC_TOPIC.trim()} />
+          )}
         </aside>
       </div>
     </div>
+  );
+}
+
+const NTFY_ANDROID_URL =
+  "https://play.google.com/store/apps/details?id=io.heckel.ntfy";
+const NTFY_IOS_URL = "https://apps.apple.com/us/app/ntfy/id1625396347";
+
+function PhoneAlertsCard({ topic }: { topic: string }) {
+  const subscribeUrl = `https://ntfy.sh/${encodeURIComponent(topic)}`;
+
+  return (
+    <section
+      aria-labelledby="sec-phone-alerts"
+      className="rounded-2xl border border-white/10 bg-[#141414] p-4 sm:p-5"
+    >
+      <div className="flex items-start gap-4">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <BellRing className="size-4 shrink-0 text-[#ff6b2b]" />
+            <h3
+              id="sec-phone-alerts"
+              className="text-sm font-bold uppercase tracking-wider text-white"
+            >
+              Get phone alerts
+            </h3>
+          </div>
+          <p className="mt-1.5 text-xs leading-relaxed text-zinc-400">
+            Receive instant push notifications for urgent announcements and
+            medal-round updates via <strong className="text-zinc-200">ntfy</strong> — free, no account needed.
+          </p>
+
+          <div className="mt-3.5 flex flex-wrap items-center gap-2">
+            <a
+              href={subscribeUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 rounded-full bg-[#ff6b2b] px-3.5 py-1.5 text-xs font-semibold text-black no-underline hover:opacity-90"
+            >
+              Subscribe
+              <ExternalLink className="size-3.5" />
+            </a>
+            <a
+              href={NTFY_ANDROID_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-medium text-zinc-200 no-underline hover:bg-white/10"
+            >
+              <Smartphone className="size-3.5" />
+              Android
+            </a>
+            <a
+              href={NTFY_IOS_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-medium text-zinc-200 no-underline hover:bg-white/10"
+            >
+              <Smartphone className="size-3.5" />
+              iOS
+            </a>
+          </div>
+        </div>
+
+        <a
+          href={subscribeUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="Open ntfy subscription link"
+          className="hidden sm:block shrink-0"
+        >
+          <QrCodeSvg
+            value={subscribeUrl}
+            size={96}
+            label={`QR code for ${subscribeUrl}`}
+          />
+        </a>
+      </div>
+    </section>
   );
 }

@@ -329,6 +329,9 @@ export async function onRequest(context: PagesContext): Promise<Response> {
           404,
         );
       }
+      // TODO(Feature 2): When the `round` column ('league'|'QF'|'SF'|'3P'|'F') and status
+      // transition check are added in 004_scorecard.sql, call publishPush via
+      // context.waitUntil(...) for SF / F / 3P live and finished transitions.
       return adminJsonResponse({ ok: true, match: updated[0] }, 200);
     } catch {
       return adminJsonResponse(

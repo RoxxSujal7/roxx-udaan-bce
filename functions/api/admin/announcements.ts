@@ -9,10 +9,17 @@ import {
   getSupabaseConfig,
   supabaseFetch,
 } from "../../../lib/server/supabase-rest";
+import {
+  buildLiveClickUrl,
+  publishPush,
+  type NtfyEnv,
+  type PushOutcome,
+} from "../../../lib/server/ntfy";
 
 interface PagesContext {
   request: Request;
-  env: AdminEnv;
+  env: AdminEnv & NtfyEnv;
+  waitUntil?: (promise: Promise<unknown>) => void;
 }
 
 const VALID_LEVELS = new Set<string>(["info", "important", "urgent"]);
@@ -122,7 +129,22 @@ export async function onRequest(context: PagesContext): Promise<Response> {
         );
       }
       const created = (await sbRes.json()) as unknown[];
-      return adminJsonResponse({ ok: true, announcement: created[0] }, 201);
+
+      let push: PushOutcome = "skipped";
+      if (level === "urgent" || level === "important") {
+        const pushPromise = publishPush(env, {
+          title:
+            level === "urgent" ? "UDAAN 2026 · Urgent" : "UDAAN 2026 · Update",
+          message,
+          priority: level === "urgent" ? 5 : 4,
+          tags: level === "urgent" ? ["rotating_light"] : ["loudspeaker"],
+          click: buildLiveClickUrl(request.url),
+        });
+        context.waitUntil?.(pushPromise);
+        push = await pushPromise;
+      }
+
+      return adminJsonResponse({ ok: true, announcement: created[0], push }, 201);
     } catch {
       return adminJsonResponse(
         { ok: false, error: "Database request failed." },
