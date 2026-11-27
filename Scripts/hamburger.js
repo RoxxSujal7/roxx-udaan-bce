@@ -2,7 +2,67 @@ let open = false;
 const body = document.body;
 const right = document.querySelector(".right");
 
+const hamImgContainer = document.querySelector(".ham-img");
 const hamImg = document.querySelector(".ham-img span");
+
+// Slide between both menu photos while the menu is open
+let hamSlideTimer = null;
+let hamSlideIndex = 0;
+let hamSlideImgs = [];
+
+if (hamImgContainer) {
+  const firstImg = hamImgContainer.querySelector("img");
+  const firstSrc = firstImg ? firstImg.getAttribute("src") : null;
+  if (firstImg && firstSrc && firstSrc.includes("ham-img.png")) {
+    const secondImg = document.createElement("img");
+    secondImg.src = firstSrc.replace("ham-img.png", "ham-img-2.jpg");
+    secondImg.alt = "";
+    hamImgContainer.insertBefore(secondImg, hamImg || null);
+    hamSlideImgs = [firstImg, secondImg];
+    const reduced =
+      typeof window !== "undefined" &&
+      window.matchMedia &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    hamSlideImgs.forEach((img, i) => {
+      img.style.position = "absolute";
+      img.style.inset = "0";
+      img.style.width = "100%";
+      img.style.height = "100%";
+      img.style.objectFit = "cover";
+      img.style.zIndex = "1";
+      img.style.transition = reduced ? "none" : "transform 0.65s ease";
+      img.style.transform = i === 0 ? "translateX(0%)" : "translateX(100%)";
+    });
+  }
+}
+
+function startHamSlide() {
+  if (hamSlideImgs.length < 2 || hamSlideTimer !== null) return;
+  const scheduleNext = () => {
+    const delay = hamSlideIndex === 1 ? 5000 : 2500;
+    hamSlideTimer = window.setTimeout(() => {
+      hamSlideIndex = (hamSlideIndex + 1) % 2;
+      hamSlideImgs[0].style.transform =
+        hamSlideIndex === 0 ? "translateX(0%)" : "translateX(-100%)";
+      hamSlideImgs[1].style.transform =
+        hamSlideIndex === 1 ? "translateX(0%)" : "translateX(100%)";
+      scheduleNext();
+    }, delay);
+  };
+  scheduleNext();
+}
+
+function stopHamSlide() {
+  if (hamSlideTimer !== null) {
+    window.clearTimeout(hamSlideTimer);
+    hamSlideTimer = null;
+  }
+  hamSlideIndex = 0;
+  if (hamSlideImgs.length === 2) {
+    hamSlideImgs[0].style.transform = "translateX(0%)";
+    hamSlideImgs[1].style.transform = "translateX(100%)";
+  }
+}
 const hamText = document.querySelector(".ham-text span");
 const hamLogoImg = document.querySelector(".ham-logo img");
 
@@ -19,6 +79,7 @@ const hamburger = document.querySelector(".hamburger");
 const closeMenu = () => {
   if (!open) return;
   open = false;
+  stopHamSlide();
 
   setTimeout(() => {
     if (hamGrid) hamGrid.style.display = "none";
@@ -66,6 +127,7 @@ if (hamburger) {
   hamburger.addEventListener("click", () => {
     if (!open) {
       open = true;
+      startHamSlide();
       if (hamGrid) hamGrid.style.display = "grid";
       if (body) body.style.overflowY = "hidden";
 
