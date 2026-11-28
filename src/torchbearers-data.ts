@@ -29,10 +29,17 @@ export const FOLDERS: TorchbearerFolder[] = [
     line: "Bhagalpur College of Engineering · 2025",
     sheets: [
       {
-        image: "/Assets/presidents/2025-demo-logo.jpg",
-        alt: "UDAAN 2025 Demo Logo",
+        image: "/Assets/presidents/2025-avineesh-kumar.jpg",
+        alt: "Avineesh Kumar",
         code: "President",
-        title: "UDAAN 2025",
+        title: "Avineesh Kumar",
+        detail: "CSE 22-26 · UDAAN 2025",
+      },
+      {
+        image: "/Assets/presidents/2025-anmol-ratan.jpg",
+        alt: "Anmol Ratan",
+        code: "Vice President",
+        title: "Anmol Ratan",
         detail: "UDAAN 2025",
       },
     ],
