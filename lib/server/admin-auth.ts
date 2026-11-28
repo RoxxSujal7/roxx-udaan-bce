@@ -186,6 +186,43 @@ export function verifySameOrigin(request: Request): boolean {
 }
 
 /**
+ * Trims surrounding whitespace and strips one layer of accidental surrounding
+ * single or double quotes from a server-side secret env var.
+ */
+export function normalizeSecretEnv(raw: string | undefined): string {
+  const trimmed = (raw ?? "").trim();
+  if (
+    trimmed.length >= 2 &&
+    ((trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+      (trimmed.startsWith("'") && trimmed.endsWith("'")))
+  ) {
+    return trimmed.slice(1, -1).trim();
+  }
+  return trimmed;
+}
+
+/**
+ * Resolves required admin auth secrets, logging missing variable names
+ * server-side only without exposing details in HTTP responses.
+ */
+export function getAdminConfig(
+  env: AdminEnv,
+): { adminPassword: string; sessionSecret: string } | null {
+  const adminPassword = normalizeSecretEnv(env.ADMIN_PASSWORD);
+  const sessionSecret = normalizeSecretEnv(env.ADMIN_SESSION_SECRET);
+  const missing: string[] = [];
+  if (!adminPassword) missing.push("ADMIN_PASSWORD");
+  if (!sessionSecret) missing.push("ADMIN_SESSION_SECRET");
+  if (missing.length > 0) {
+    console.error(
+      `[admin-auth] 503 Admin access not configured; missing env: ${missing.join(", ")}`,
+    );
+    return null;
+  }
+  return { adminPassword, sessionSecret };
+}
+
+/**
  * Verifies server config, same-origin CSRF on mutations, and the HttpOnly signed session cookie.
  * Returns null if authorized, or an error Response (503 / 403 / 401) if not.
  */
@@ -193,14 +230,14 @@ export async function requireAdminAuth(
   request: Request,
   env: AdminEnv,
 ): Promise<Response | null> {
-  const adminPassword = env.ADMIN_PASSWORD?.trim();
-  const sessionSecret = env.ADMIN_SESSION_SECRET?.trim();
-  if (!adminPassword || !sessionSecret) {
+  const cfg = getAdminConfig(env);
+  if (!cfg) {
     return adminJsonResponse(
       { ok: false, error: "Admin access is not configured." },
       503,
     );
   }
+  const { sessionSecret } = cfg;
 
   if (STATE_CHANGING_METHODS.has(request.method.toUpperCase())) {
     if (!verifySameOrigin(request)) {

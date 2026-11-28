@@ -6,6 +6,7 @@ import {
   buildSessionCookie,
   constantTimeEqual,
   createSessionToken,
+  getAdminConfig,
   verifySameOrigin,
   type AdminEnv,
 } from "../../../lib/server/admin-auth";
@@ -31,14 +32,14 @@ export async function onRequest(context: PagesContext): Promise<Response> {
     );
   }
 
-  const adminPassword = env.ADMIN_PASSWORD?.trim();
-  const sessionSecret = env.ADMIN_SESSION_SECRET?.trim();
-  if (!adminPassword || !sessionSecret) {
+  const cfg = getAdminConfig(env);
+  if (!cfg) {
     return adminJsonResponse(
       { ok: false, error: "Admin access is not configured." },
       503,
     );
   }
+  const { adminPassword, sessionSecret } = cfg;
 
   let rawBody: string;
   try {

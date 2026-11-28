@@ -113,6 +113,27 @@ function verifySameOrigin(request) {
   }
   return false;
 }
+function normalizeSecretEnv(raw) {
+  const trimmed = (raw ?? "").trim();
+  if (trimmed.length >= 2 && (trimmed.startsWith('"') && trimmed.endsWith('"') || trimmed.startsWith("'") && trimmed.endsWith("'"))) {
+    return trimmed.slice(1, -1).trim();
+  }
+  return trimmed;
+}
+function getAdminConfig(env) {
+  const adminPassword = normalizeSecretEnv(env.ADMIN_PASSWORD);
+  const sessionSecret = normalizeSecretEnv(env.ADMIN_SESSION_SECRET);
+  const missing = [];
+  if (!adminPassword) missing.push("ADMIN_PASSWORD");
+  if (!sessionSecret) missing.push("ADMIN_SESSION_SECRET");
+  if (missing.length > 0) {
+    console.error(
+      `[admin-auth] 503 Admin access not configured; missing env: ${missing.join(", ")}`
+    );
+    return null;
+  }
+  return { adminPassword, sessionSecret };
+}
 
 // functions/api/admin/login.ts
 var MAX_LOGIN_BYTES = 4096;
@@ -127,14 +148,14 @@ async function onRequest(context) {
       403
     );
   }
-  const adminPassword = env.ADMIN_PASSWORD?.trim();
-  const sessionSecret = env.ADMIN_SESSION_SECRET?.trim();
-  if (!adminPassword || !sessionSecret) {
+  const cfg = getAdminConfig(env);
+  if (!cfg) {
     return adminJsonResponse(
       { ok: false, error: "Admin access is not configured." },
       503
     );
   }
+  const { adminPassword, sessionSecret } = cfg;
   let rawBody;
   try {
     rawBody = await request.text();

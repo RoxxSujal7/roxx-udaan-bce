@@ -4,6 +4,8 @@ import path from "node:path";
 import {
   SESSION_COOKIE_NAME,
   createSessionToken,
+  getAdminConfig,
+  normalizeSecretEnv,
   verifySessionToken,
 } from "../lib/server/admin-auth";
 import { buildSupabaseAuthHeaders } from "../lib/server/supabase-rest";
@@ -835,8 +837,48 @@ async function testVercelAdapters() {
   }
 }
 
+async function testSecretNormalizationAnd503Logging() {
+  assert.equal(normalizeSecretEnv('  "demo123"  '), "demo123");
+  assert.equal(normalizeSecretEnv("  'sujal123'  "), "sujal123");
+  assert.equal(normalizeSecretEnv('""'), "");
+  assert.equal(normalizeSecretEnv('"unbalanced'), '"unbalanced');
+
+  // Verify 503 logs missing env var names without exposing secret values or lengths
+  const errors: string[] = [];
+  const origError = console.error;
+  console.error = (...args: unknown[]) => errors.push(args.map(String).join(" "));
+  try {
+    const cfg = getAdminConfig({ ADMIN_PASSWORD: '""' });
+    assert.equal(cfg, null);
+    assert.equal(errors.length, 1);
+    assert.ok(errors[0].includes("ADMIN_PASSWORD"));
+    assert.ok(errors[0].includes("ADMIN_SESSION_SECRET"));
+  } finally {
+    console.error = origError;
+  }
+
+  // Quoted env vars still allow login + session verification
+  const quotedEnv = {
+    ADMIN_PASSWORD: `"${ADMIN_PW}"`,
+    ADMIN_SESSION_SECRET: `'${SESSION_SECRET}'`,
+  };
+  const loginRes = await loginHandler({
+    request: new Request("https://udaan.test/api/admin/login", {
+      method: "POST",
+      headers: {
+        Origin: "https://udaan.test",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ password: ADMIN_PW }),
+    }),
+    env: quotedEnv,
+  });
+  assert.equal(loginRes.status, 200);
+}
+
 async function main() {
   await testAuthHeaderHelper();
+  await testSecretNormalizationAnd503Logging();
   await testLoginLogoutSessionAndCsrf();
   await testKeyCompatibilityAcrossAllRoutes(SB_SECRET);
   await testKeyCompatibilityAcrossAllRoutes(LEGACY_JWT);
