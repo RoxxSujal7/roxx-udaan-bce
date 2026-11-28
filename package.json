@@ -17,6 +17,8 @@
     "build:admin:css": "tailwindcss -i src/admin.css -o Scripts/admin.bundle.css --minify",
     "build:admin:js": "esbuild src/admin-entry.tsx --bundle --minify --jsx=automatic --outfile=Scripts/admin.bundle.js",
     "build:admin": "npm run build:admin:css && npm run build:admin:js",
+    "build:torchbearers:js": "esbuild src/torchbearers-entry.tsx --bundle --minify --jsx=automatic --outfile=Scripts/torchbearers.bundle.js",
+    "build:torchbearers": "npm run build:torchbearers:js",
     "build:archive:css": "tailwindcss -i src/archive.css -o Scripts/archive.bundle.css --minify",
     "build:archive:js": "esbuild src/archive-entry.tsx --bundle --minify --jsx=automatic --outfile=Scripts/archive.bundle.js",
     "build:archive": "npm run build:archive:css && npm run build:archive:js",
