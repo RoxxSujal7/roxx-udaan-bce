@@ -1,4 +1,6 @@
 node_modules/
+dist/
+Scripts/esm/
 .dev.vars
 .env
 .env.*

@@ -31,7 +31,8 @@
     "build:live-alerts:css": "tailwindcss -i src/live-alerts.css -o Scripts/live-alerts.bundle.css --minify",
     "build:live-alerts:js": "esbuild src/live-alerts-entry.tsx --bundle --minify --jsx=automatic --outfile=Scripts/live-alerts.bundle.js",
     "build:live-alerts": "npm run build:live-alerts:css && npm run build:live-alerts:js",
-    "build:api": "node Scripts/build-api.mjs"
+    "build:api": "node Scripts/build-api.mjs",
+    "build": "node Scripts/build-dist.mjs"
   },
   "dependencies": {
     "@radix-ui/react-avatar": "^1.3.1",

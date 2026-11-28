@@ -1,11 +1,13 @@
 @font-face {
   font-family: Zona;
   src: url(../Assets/Fonts/ZonaPro-Bold.otf);
+  font-display: swap;
 }
 
 @font-face {
   font-family: Striker;
   src: url(../Assets/Fonts/Striker.otf);
+  font-display: swap;
 }
 
 * {

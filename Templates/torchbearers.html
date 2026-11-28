@@ -32,7 +32,7 @@
 <body style="background:#0e1014;">
   <div class="loader">
     <div class="video-wrapper">
-      <video autoplay loop muted playsinline id="video" width="100%">
+      <video preload="none" poster="../Assets/loader-poster.jpg" loop muted playsinline id="video" width="100%">
         <source src="../Assets/loader.mp4" type="video/mp4" />
       </video>
       <div class="shadow"></div>
@@ -90,7 +90,7 @@
     <div id="torchbearers-root" style="width: 100%;"></div>
   </main>
 
-  <div id="udaan-footer-root"></div>
+  <div id="udaan-footer-root" style="min-height: 360px;"></div>
 </body>
 
 </html>

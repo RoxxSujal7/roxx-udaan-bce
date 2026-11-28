@@ -33,9 +33,22 @@
     isReload = false;
   }
 
-  // On refresh, clear the cookie so the loader replays in full
+  // On refresh, clear the cookie/session flag so the loader replays in full
   if (isReload) {
     deleteCookie("showContinue");
+    try {
+      if (window.sessionStorage) sessionStorage.removeItem("udaan_intro_seen");
+    } catch {}
+  }
+
+  var hasSeenIntro = false;
+  try {
+    hasSeenIntro = window.sessionStorage && sessionStorage.getItem("udaan_intro_seen") === "1";
+  } catch {}
+  if (hasSeenIntro || getCookie("showContinue") === "false") {
+    var earlyLoader = document.querySelector(".loader");
+    if (earlyLoader) earlyLoader.style.display = "none";
+    if (loaderBody) loaderBody.style.overflowY = "scroll";
   }
 
   window.addEventListener("load", function () {
@@ -43,6 +56,9 @@
     var light = document.getElementsByClassName("light");
 
     loader.addEventListener("click", function () {
+      try {
+        if (window.sessionStorage) sessionStorage.setItem("udaan_intro_seen", "1");
+      } catch {}
       var fred = document.getElementsByClassName("fall-red");
       var fblue = document.getElementsByClassName("fall-blue");
       var fyellow = document.getElementsByClassName("fall-yellow");
