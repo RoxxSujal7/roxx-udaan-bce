@@ -264,10 +264,15 @@ async function publishPush(env, payload) {
 
 // lib/server/supabase-rest.ts
 function getSupabaseConfig(env) {
-  const url = env.SUPABASE_URL?.trim().replace(/\/+$/, "");
-  const secretKey = env.SUPABASE_SECRET_KEY?.trim();
+  const rawUrl = normalizeSecretEnv(env.SUPABASE_URL);
+  const url = rawUrl.replace(/\/+$/, "").replace(/\/rest\/v1$/i, "").replace(/\/+$/, "");
+  const secretKey = normalizeSecretEnv(env.SUPABASE_SECRET_KEY);
   if (!url || !secretKey) return null;
   return { url, secretKey };
+}
+async function logSupabaseError(route, response) {
+  const body = (await response.clone().text().catch(() => "")).slice(0, 300);
+  console.error("[supabase]", route, response.status, body);
 }
 function buildSupabaseAuthHeaders(secretKey, extra) {
   const headers = new Headers(extra);
@@ -365,7 +370,10 @@ async function resolveTeamNames(cfg, ids) {
     cfg,
     `teams?id=in.(${inClause})&select=id,name`
   );
-  if (!res.ok) return map;
+  if (!res.ok) {
+    await logSupabaseError("GET /api/admin/matches (resolveTeamNames)", res);
+    return map;
+  }
   const rows = await res.json();
   for (const r of rows) map.set(r.id, r.name);
   return map;
@@ -655,6 +663,7 @@ async function onRequest(context) {
         `matches?id=eq.${encodeURIComponent(id)}&select=*`
       );
       if (!existingRes.ok) {
+        await logSupabaseError("POST /api/admin/matches (finish load)", existingRes);
         return adminJsonResponse({ ok: false, error: "Failed to load match." }, 502);
       }
       const existingRows = await existingRes.json();
@@ -690,6 +699,7 @@ async function onRequest(context) {
         })
       });
       if (!rpcRes.ok) {
+        await logSupabaseError("POST /api/admin/matches (finish rpc)", rpcRes);
         return adminJsonResponse(
           { ok: false, error: "Failed to record match result." },
           502
@@ -699,6 +709,9 @@ async function onRequest(context) {
         cfg,
         `matches?id=eq.${encodeURIComponent(id)}&select=*`
       );
+      if (!refreshedRes.ok) {
+        await logSupabaseError("POST /api/admin/matches (finish refresh)", refreshedRes);
+      }
       const refreshedRows = refreshedRes.ok ? await refreshedRes.json() : [prev];
       const updated = refreshedRows[0] ?? prev;
       const push = await maybePushMatchEvent(
@@ -758,6 +771,7 @@ async function onRequest(context) {
         body: JSON.stringify(rows)
       });
       if (!sbRes.ok) {
+        await logSupabaseError("POST /api/admin/matches", sbRes);
         return adminJsonResponse(
           { ok: false, error: "Failed to save match(es) to database." },
           502
@@ -795,6 +809,7 @@ async function onRequest(context) {
         `matches?id=eq.${encodeURIComponent(id)}&select=id,status,round,event,team_a,team_b,team_a_id,team_b_id,venue,result`
       );
       if (!prevRes.ok) {
+        await logSupabaseError("PATCH /api/admin/matches (load)", prevRes);
         return adminJsonResponse(
           { ok: false, error: "Failed to load match." },
           502
@@ -851,6 +866,7 @@ async function onRequest(context) {
         body: JSON.stringify(res.data)
       });
       if (!sbRes.ok) {
+        await logSupabaseError("PATCH /api/admin/matches", sbRes);
         return adminJsonResponse(
           { ok: false, error: "Failed to update match in database." },
           502
@@ -888,6 +904,7 @@ async function onRequest(context) {
       { method: "DELETE" }
     );
     if (!sbRes.ok) {
+      await logSupabaseError("DELETE /api/admin/matches", sbRes);
       return adminJsonResponse(
         { ok: false, error: "Failed to delete match from database." },
         502

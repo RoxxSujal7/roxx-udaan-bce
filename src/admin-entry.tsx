@@ -101,6 +101,8 @@ function LoginScreen({
       setLoading(false);
       if (loginRes.status === 401) {
         setError("Wrong password. Please try again.");
+      } else if (loginRes.status === 429) {
+        setError("Too many attempts. Please wait 15 minutes and try again.");
       } else if (loginRes.status === 503) {
         setError("Admin access is not configured on the server.");
       } else {

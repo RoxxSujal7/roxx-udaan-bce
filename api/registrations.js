@@ -23,7 +23,29 @@ __export(vercel_entry_exports, {
 });
 module.exports = __toCommonJS(vercel_entry_exports);
 
+// lib/server/admin-auth.ts
+var SESSION_TTL_SECONDS = 8 * 60 * 60;
+var SESSION_TTL_MS = SESSION_TTL_SECONDS * 1e3;
+function normalizeSecretEnv(raw) {
+  const trimmed = (raw ?? "").trim();
+  if (trimmed.length >= 2 && (trimmed.startsWith('"') && trimmed.endsWith('"') || trimmed.startsWith("'") && trimmed.endsWith("'"))) {
+    return trimmed.slice(1, -1).trim();
+  }
+  return trimmed;
+}
+
 // lib/server/supabase-rest.ts
+function getSupabaseConfig(env) {
+  const rawUrl = normalizeSecretEnv(env.SUPABASE_URL);
+  const url = rawUrl.replace(/\/+$/, "").replace(/\/rest\/v1$/i, "").replace(/\/+$/, "");
+  const secretKey = normalizeSecretEnv(env.SUPABASE_SECRET_KEY);
+  if (!url || !secretKey) return null;
+  return { url, secretKey };
+}
+async function logSupabaseError(route, response) {
+  const body = (await response.clone().text().catch(() => "")).slice(0, 300);
+  console.error("[supabase]", route, response.status, body);
+}
 function buildSupabaseAuthHeaders(secretKey, extra) {
   const headers = new Headers(extra);
   headers.set("apikey", secretKey);
@@ -33,6 +55,16 @@ function buildSupabaseAuthHeaders(secretKey, extra) {
     headers.set("Authorization", `Bearer ${secretKey}`);
   }
   return headers;
+}
+async function supabaseFetch(cfg, pathAndQuery, init = {}) {
+  const headers = buildSupabaseAuthHeaders(cfg.secretKey, init.headers);
+  if (init.body && !headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json");
+  }
+  return fetch(`${cfg.url}/rest/v1/${pathAndQuery}`, {
+    ...init,
+    headers
+  });
 }
 
 // functions/api/registrations.ts
@@ -265,9 +297,8 @@ async function onRequestPost(context) {
       400
     );
   }
-  const supabaseUrl = env.SUPABASE_URL?.trim().replace(/\/+$/, "");
-  const supabaseSecretKey = env.SUPABASE_SECRET_KEY?.trim();
-  if (!supabaseUrl || !supabaseSecretKey) {
+  const cfg = getSupabaseConfig(env);
+  if (!cfg) {
     return jsonResponse(
       {
         ok: false,
@@ -293,23 +324,17 @@ async function onRequestPost(context) {
     confirmed_details: true,
     status: "submitted"
   };
-  const supabaseResponse = await fetch(
-    `${supabaseUrl}/rest/v1/event_registrations`,
-    {
-      method: "POST",
-      headers: buildSupabaseAuthHeaders(supabaseSecretKey, {
-        "Content-Type": "application/json",
-        Prefer: "return=representation"
-      }),
-      body: JSON.stringify(record)
-    }
-  );
+  const supabaseResponse = await supabaseFetch(cfg, "event_registrations", {
+    method: "POST",
+    headers: {
+      Prefer: "return=representation"
+    },
+    body: JSON.stringify(record)
+  });
   if (supabaseResponse.status === 409) {
-    const lookup = await fetch(
-      `${supabaseUrl}/rest/v1/event_registrations?submission_id=eq.${encodeURIComponent(submissionId)}&select=id,created_at`,
-      {
-        headers: buildSupabaseAuthHeaders(supabaseSecretKey)
-      }
+    const lookup = await supabaseFetch(
+      cfg,
+      `event_registrations?submission_id=eq.${encodeURIComponent(submissionId)}&select=id,created_at`
     );
     if (lookup.ok) {
       const existing = await lookup.json();
@@ -324,6 +349,8 @@ async function onRequestPost(context) {
           200
         );
       }
+    } else {
+      await logSupabaseError("POST /api/registrations (dedup lookup)", lookup);
     }
     return jsonResponse(
       { ok: false, error: "Duplicate submission detected." },
@@ -331,6 +358,7 @@ async function onRequestPost(context) {
     );
   }
   if (!supabaseResponse.ok) {
+    await logSupabaseError("POST /api/registrations", supabaseResponse);
     return jsonResponse(
       {
         ok: false,

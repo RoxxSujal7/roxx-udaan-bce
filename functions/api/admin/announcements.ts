@@ -7,6 +7,7 @@ import {
 } from "../../../lib/server/admin-auth";
 import {
   getSupabaseConfig,
+  logSupabaseError,
   supabaseFetch,
 } from "../../../lib/server/supabase-rest";
 import {
@@ -123,6 +124,7 @@ export async function onRequest(context: PagesContext): Promise<Response> {
         }),
       });
       if (!sbRes.ok) {
+        await logSupabaseError("POST /api/admin/announcements", sbRes);
         return adminJsonResponse(
           { ok: false, error: "Failed to create announcement." },
           502,
@@ -228,6 +230,7 @@ export async function onRequest(context: PagesContext): Promise<Response> {
         },
       );
       if (!sbRes.ok) {
+        await logSupabaseError("PATCH /api/admin/announcements", sbRes);
         return adminJsonResponse(
           { ok: false, error: "Failed to update announcement." },
           502,
@@ -257,6 +260,7 @@ export async function onRequest(context: PagesContext): Promise<Response> {
       { method: "DELETE" },
     );
     if (!sbRes.ok) {
+      await logSupabaseError("DELETE /api/admin/announcements", sbRes);
       return adminJsonResponse(
         { ok: false, error: "Failed to delete announcement." },
         502,

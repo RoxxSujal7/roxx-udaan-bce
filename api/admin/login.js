@@ -135,6 +135,127 @@ function getAdminConfig(env) {
   return { adminPassword, sessionSecret };
 }
 
+// lib/server/supabase-rest.ts
+function getSupabaseConfig(env) {
+  const rawUrl = normalizeSecretEnv(env.SUPABASE_URL);
+  const url = rawUrl.replace(/\/+$/, "").replace(/\/rest\/v1$/i, "").replace(/\/+$/, "");
+  const secretKey = normalizeSecretEnv(env.SUPABASE_SECRET_KEY);
+  if (!url || !secretKey) return null;
+  return { url, secretKey };
+}
+async function logSupabaseError(route, response) {
+  const body = (await response.clone().text().catch(() => "")).slice(0, 300);
+  console.error("[supabase]", route, response.status, body);
+}
+function buildSupabaseAuthHeaders(secretKey, extra) {
+  const headers = new Headers(extra);
+  headers.set("apikey", secretKey);
+  if (secretKey.startsWith("sb_secret_")) {
+    headers.delete("Authorization");
+  } else {
+    headers.set("Authorization", `Bearer ${secretKey}`);
+  }
+  return headers;
+}
+async function supabaseFetch(cfg, pathAndQuery, init = {}) {
+  const headers = buildSupabaseAuthHeaders(cfg.secretKey, init.headers);
+  if (init.body && !headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json");
+  }
+  return fetch(`${cfg.url}/rest/v1/${pathAndQuery}`, {
+    ...init,
+    headers
+  });
+}
+
+// lib/server/login-rate-limit.ts
+function extractClientIp(request) {
+  const cfIp = request.headers.get("CF-Connecting-IP")?.trim();
+  if (cfIp) return cfIp;
+  const xff = request.headers.get("X-Forwarded-For");
+  if (xff) {
+    const first = xff.split(",")[0]?.trim();
+    if (first) return first;
+  }
+  const realIp = request.headers.get("X-Real-IP")?.trim();
+  if (realIp) return realIp;
+  return "unknown";
+}
+async function hashClientIp(ip, sessionSecret) {
+  const bytes = new TextEncoder().encode(`${ip}:${sessionSecret}`);
+  const digest = await crypto.subtle.digest("SHA-256", bytes);
+  return Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+async function checkLoginLockout(cfg, ipHash, nowMs = Date.now()) {
+  if (!cfg) return { locked: false };
+  try {
+    const res = await supabaseFetch(
+      cfg,
+      `admin_login_attempts?ip_hash=eq.${encodeURIComponent(ipHash)}&select=locked_until`
+    );
+    if (!res.ok) {
+      await logSupabaseError("POST /api/admin/login (rate-limit check)", res);
+      return { locked: false };
+    }
+    const rows = await res.json();
+    const lockedUntil = rows[0]?.locked_until;
+    if (!lockedUntil) return { locked: false };
+    const lockedMs = Date.parse(lockedUntil);
+    if (Number.isFinite(lockedMs) && lockedMs > nowMs) {
+      const retryAfterSeconds = Math.max(
+        1,
+        Math.ceil((lockedMs - nowMs) / 1e3)
+      );
+      return { locked: true, retryAfterSeconds };
+    }
+    return { locked: false };
+  } catch {
+    console.error(
+      "[supabase]",
+      "POST /api/admin/login (rate-limit check)",
+      "network-error"
+    );
+    return { locked: false };
+  }
+}
+async function recordLoginFailure(cfg, ipHash) {
+  if (!cfg) return;
+  try {
+    const res = await supabaseFetch(cfg, "rpc/record_admin_login_failure", {
+      method: "POST",
+      body: JSON.stringify({ p_ip_hash: ipHash })
+    });
+    if (!res.ok) {
+      await logSupabaseError("POST /api/admin/login (rate-limit record)", res);
+    }
+  } catch {
+    console.error(
+      "[supabase]",
+      "POST /api/admin/login (rate-limit record)",
+      "network-error"
+    );
+  }
+}
+async function clearLoginAttempts(cfg, ipHash) {
+  if (!cfg) return;
+  try {
+    const res = await supabaseFetch(
+      cfg,
+      `admin_login_attempts?ip_hash=eq.${encodeURIComponent(ipHash)}`,
+      { method: "DELETE" }
+    );
+    if (!res.ok) {
+      await logSupabaseError("POST /api/admin/login (rate-limit clear)", res);
+    }
+  } catch {
+    console.error(
+      "[supabase]",
+      "POST /api/admin/login (rate-limit clear)",
+      "network-error"
+    );
+  }
+}
+
 // functions/api/admin/login.ts
 var MAX_LOGIN_BYTES = 4096;
 async function onRequest(context) {
@@ -156,6 +277,16 @@ async function onRequest(context) {
     );
   }
   const { adminPassword, sessionSecret } = cfg;
+  const sbCfg = getSupabaseConfig(env);
+  const ipHash = await hashClientIp(extractClientIp(request), sessionSecret);
+  const lock = await checkLoginLockout(sbCfg, ipHash);
+  if (lock.locked) {
+    return adminJsonResponse(
+      { ok: false, error: "Too many attempts. Try again later." },
+      429,
+      { "Retry-After": String(lock.retryAfterSeconds) }
+    );
+  }
   let rawBody;
   try {
     rawBody = await request.text();
@@ -176,9 +307,11 @@ async function onRequest(context) {
   }
   const valid = password.length > 0 && await constantTimeEqual(password, adminPassword);
   if (!valid) {
+    await recordLoginFailure(sbCfg, ipHash);
     await new Promise((resolve) => setTimeout(resolve, 600));
     return adminJsonResponse({ ok: false, error: "Unauthorized." }, 401);
   }
+  await clearLoginAttempts(sbCfg, ipHash);
   const { token, expiresAt } = await createSessionToken(sessionSecret);
   return adminJsonResponse(
     { ok: true, expiresAt },

@@ -1,7 +1,11 @@
 // Cloudflare Pages Function: POST /api/registrations
 // Validates UDAAN 2026 event registration submissions and persists them to Supabase PostgreSQL.
 
-import { buildSupabaseAuthHeaders } from "../../lib/server/supabase-rest";
+import {
+  getSupabaseConfig,
+  logSupabaseError,
+  supabaseFetch,
+} from "../../lib/server/supabase-rest";
 
 export interface Env {
   SUPABASE_URL?: string;
@@ -295,10 +299,8 @@ export async function onRequestPost(context: PagesContext): Promise<Response> {
     );
   }
 
-  const supabaseUrl = env.SUPABASE_URL?.trim().replace(/\/+$/, "");
-  const supabaseSecretKey = env.SUPABASE_SECRET_KEY?.trim();
-
-  if (!supabaseUrl || !supabaseSecretKey) {
+  const cfg = getSupabaseConfig(env);
+  if (!cfg) {
     return jsonResponse(
       {
         ok: false,
@@ -327,25 +329,19 @@ export async function onRequestPost(context: PagesContext): Promise<Response> {
     status: "submitted",
   };
 
-  const supabaseResponse = await fetch(
-    `${supabaseUrl}/rest/v1/event_registrations`,
-    {
-      method: "POST",
-      headers: buildSupabaseAuthHeaders(supabaseSecretKey, {
-        "Content-Type": "application/json",
-        Prefer: "return=representation",
-      }),
-      body: JSON.stringify(record),
+  const supabaseResponse = await supabaseFetch(cfg, "event_registrations", {
+    method: "POST",
+    headers: {
+      Prefer: "return=representation",
     },
-  );
+    body: JSON.stringify(record),
+  });
 
   if (supabaseResponse.status === 409) {
     // Idempotent duplicate submission_id handling: fetch existing registration id
-    const lookup = await fetch(
-      `${supabaseUrl}/rest/v1/event_registrations?submission_id=eq.${encodeURIComponent(submissionId)}&select=id,created_at`,
-      {
-        headers: buildSupabaseAuthHeaders(supabaseSecretKey),
-      },
+    const lookup = await supabaseFetch(
+      cfg,
+      `event_registrations?submission_id=eq.${encodeURIComponent(submissionId)}&select=id,created_at`,
     );
     if (lookup.ok) {
       const existing = (await lookup.json()) as Array<{
@@ -363,6 +359,8 @@ export async function onRequestPost(context: PagesContext): Promise<Response> {
           200,
         );
       }
+    } else {
+      await logSupabaseError("POST /api/registrations (dedup lookup)", lookup);
     }
     return jsonResponse(
       { ok: false, error: "Duplicate submission detected." },
@@ -371,6 +369,7 @@ export async function onRequestPost(context: PagesContext): Promise<Response> {
   }
 
   if (!supabaseResponse.ok) {
+    await logSupabaseError("POST /api/registrations", supabaseResponse);
     return jsonResponse(
       {
         ok: false,

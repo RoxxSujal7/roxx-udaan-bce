@@ -10,6 +10,14 @@ import {
   verifySameOrigin,
   type AdminEnv,
 } from "../../../lib/server/admin-auth";
+import {
+  checkLoginLockout,
+  clearLoginAttempts,
+  extractClientIp,
+  hashClientIp,
+  recordLoginFailure,
+} from "../../../lib/server/login-rate-limit";
+import { getSupabaseConfig } from "../../../lib/server/supabase-rest";
 
 interface PagesContext {
   request: Request;
@@ -40,6 +48,17 @@ export async function onRequest(context: PagesContext): Promise<Response> {
     );
   }
   const { adminPassword, sessionSecret } = cfg;
+  const sbCfg = getSupabaseConfig(env);
+  const ipHash = await hashClientIp(extractClientIp(request), sessionSecret);
+
+  const lock = await checkLoginLockout(sbCfg, ipHash);
+  if (lock.locked) {
+    return adminJsonResponse(
+      { ok: false, error: "Too many attempts. Try again later." },
+      429,
+      { "Retry-After": String(lock.retryAfterSeconds) },
+    );
+  }
 
   let rawBody: string;
   try {
@@ -63,10 +82,12 @@ export async function onRequest(context: PagesContext): Promise<Response> {
 
   const valid = password.length > 0 && (await constantTimeEqual(password, adminPassword));
   if (!valid) {
+    await recordLoginFailure(sbCfg, ipHash);
     await new Promise((resolve) => setTimeout(resolve, 600));
     return adminJsonResponse({ ok: false, error: "Unauthorized." }, 401);
   }
 
+  await clearLoginAttempts(sbCfg, ipHash);
   const { token, expiresAt } = await createSessionToken(sessionSecret);
   return adminJsonResponse(
     { ok: true, expiresAt },

@@ -8,7 +8,11 @@ import {
   normalizeSecretEnv,
   verifySessionToken,
 } from "../lib/server/admin-auth";
-import { buildSupabaseAuthHeaders } from "../lib/server/supabase-rest";
+import {
+  buildSupabaseAuthHeaders,
+  getSupabaseConfig,
+  logSupabaseError,
+} from "../lib/server/supabase-rest";
 import { onRequestPost as registrationsPost } from "../functions/api/registrations";
 import { onRequest as loginHandler } from "../functions/api/admin/login";
 import { onRequest as logoutHandler } from "../functions/api/admin/logout";
@@ -876,9 +880,213 @@ async function testSecretNormalizationAnd503Logging() {
   assert.equal(loginRes.status, 200);
 }
 
+async function testSupabaseUrlNormalizationAndErrorLogging() {
+  const cfg1 = getSupabaseConfig({
+    SUPABASE_URL: '  "https://example.supabase.co/rest/v1/"  ',
+    SUPABASE_SECRET_KEY: `  '${SB_SECRET}'  `,
+  });
+  assert.deepEqual(cfg1, {
+    url: "https://example.supabase.co",
+    secretKey: SB_SECRET,
+  });
+
+  const cfg2 = getSupabaseConfig({
+    SUPABASE_URL: "https://example.supabase.co/rest/v1",
+    SUPABASE_SECRET_KEY: SB_SECRET,
+  });
+  assert.deepEqual(cfg2, {
+    url: "https://example.supabase.co",
+    secretKey: SB_SECRET,
+  });
+
+  // registrations.ts uses shared getSupabaseConfig + supabaseFetch + logSupabaseError
+  const regSrc = fs.readFileSync(
+    path.join(process.cwd(), "functions", "api", "registrations.ts"),
+    "utf8",
+  );
+  assert.ok(regSrc.includes("getSupabaseConfig("));
+  assert.ok(regSrc.includes("supabaseFetch("));
+  assert.ok(regSrc.includes("logSupabaseError("));
+
+  const errors: string[] = [];
+  const origError = console.error;
+  console.error = (...args: unknown[]) => errors.push(args.map(String).join(" "));
+  try {
+    await logSupabaseError(
+      "POST /api/registrations",
+      new Response("PGRST125 Invalid path", { status: 404 }),
+    );
+    assert.equal(errors.length, 1);
+    assert.ok(errors[0].includes("[supabase]"));
+    assert.ok(errors[0].includes("POST /api/registrations"));
+    assert.ok(errors[0].includes("404"));
+    assert.ok(errors[0].includes("PGRST125"));
+
+    const res = await withMockFetch(
+      async (req) => {
+        assert.equal(
+          req.url,
+          "https://example.supabase.co/rest/v1/event_registrations",
+        );
+        return new Response(JSON.stringify([{ id: "reg-1", created_at: "2026-01-01T00:00:00Z" }]), {
+          status: 201,
+          headers: { "Content-Type": "application/json" },
+        });
+      },
+      async () =>
+        registrationsPost({
+          request: new Request("https://udaan.test/api/registrations", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              submissionId: "11111111-1111-4111-8111-111111111111",
+              fullName: "Test User",
+              email: "test@example.com",
+              phoneCountryCode: "+91",
+              phone: "9876543210",
+              college: "BCE Bhagalpur",
+              events: ["Cricket"],
+              participationType: "individual",
+              confirmedDetails: true,
+            }),
+          }),
+          env: {
+            SUPABASE_URL: '"https://example.supabase.co/rest/v1/"',
+            SUPABASE_SECRET_KEY: SB_SECRET,
+          },
+        }),
+    );
+    assert.equal(res.status, 201);
+  } finally {
+    console.error = origError;
+  }
+}
+
+async function testLoginRateLimitingAndFailOpen() {
+  const env = {
+    ADMIN_PASSWORD: ADMIN_PW,
+    ADMIN_SESSION_SECRET: SESSION_SECRET,
+    SUPABASE_URL,
+    SUPABASE_SECRET_KEY: SB_SECRET,
+  };
+
+  let failCount = 0;
+  let lockedUntil: string | null = null;
+  let clearedCount = 0;
+
+  // 5 failures -> 6th attempt returns 429 even with correct password
+  await withMockFetch(
+    async (req) => {
+      if (req.url.includes("admin_login_attempts") && req.method === "GET") {
+        return new Response(JSON.stringify([{ locked_until: lockedUntil }]), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      if (req.url.includes("rpc/record_admin_login_failure") && req.method === "POST") {
+        failCount += 1;
+        if (failCount >= 5) {
+          lockedUntil = new Date(Date.now() + 15 * 60_000).toISOString();
+        }
+        return new Response(
+          JSON.stringify([{ fail_count: failCount, locked_until: lockedUntil }]),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        );
+      }
+      if (req.url.includes("admin_login_attempts") && req.method === "DELETE") {
+        clearedCount += 1;
+        failCount = 0;
+        lockedUntil = null;
+        return new Response("", { status: 204 });
+      }
+      return new Response("Not found", { status: 404 });
+    },
+    async () => {
+      for (let i = 0; i < 5; i++) {
+        const res = await loginHandler({
+          request: new Request("https://udaan.test/api/admin/login", {
+            method: "POST",
+            headers: {
+              Origin: "https://udaan.test",
+              "Content-Type": "application/json",
+              "CF-Connecting-IP": "203.0.113.42",
+            },
+            body: JSON.stringify({ password: "wrong-password" }),
+          }),
+          env,
+        });
+        assert.equal(res.status, 401);
+      }
+
+      // 6th attempt with CORRECT password must be blocked with 429 + Retry-After
+      const blocked = await loginHandler({
+        request: new Request("https://udaan.test/api/admin/login", {
+          method: "POST",
+          headers: {
+            Origin: "https://udaan.test",
+            "Content-Type": "application/json",
+            "CF-Connecting-IP": "203.0.113.42",
+          },
+          body: JSON.stringify({ password: ADMIN_PW }),
+        }),
+        env,
+      });
+      assert.equal(blocked.status, 429);
+      assert.ok(Number(blocked.headers.get("Retry-After")) > 0);
+      assert.equal(blocked.headers.get("Set-Cookie"), null);
+
+      // Unlock and verify successful login clears counter
+      lockedUntil = null;
+      const okRes = await loginHandler({
+        request: new Request("https://udaan.test/api/admin/login", {
+          method: "POST",
+          headers: {
+            Origin: "https://udaan.test",
+            "Content-Type": "application/json",
+            "X-Forwarded-For": "203.0.113.42, 10.0.0.1",
+          },
+          body: JSON.stringify({ password: ADMIN_PW }),
+        }),
+        env,
+      });
+      assert.equal(okRes.status, 200);
+      assert.equal(clearedCount, 1);
+    },
+  );
+
+  // Supabase unavailable -> fail open (allows login check)
+  const errors: string[] = [];
+  const origError = console.error;
+  console.error = (...args: unknown[]) => errors.push(args.map(String).join(" "));
+  try {
+    const failOpenRes = await withMockFetch(
+      async () => new Response("Service Unavailable", { status: 503 }),
+      async () =>
+        loginHandler({
+          request: new Request("https://udaan.test/api/admin/login", {
+            method: "POST",
+            headers: {
+              Origin: "https://udaan.test",
+              "Content-Type": "application/json",
+              "X-Real-IP": "198.51.100.7",
+            },
+            body: JSON.stringify({ password: ADMIN_PW }),
+          }),
+          env,
+        }),
+    );
+    assert.equal(failOpenRes.status, 200);
+    assert.ok(errors.some((e) => e.includes("[supabase]")));
+  } finally {
+    console.error = origError;
+  }
+}
+
 async function main() {
   await testAuthHeaderHelper();
   await testSecretNormalizationAnd503Logging();
+  await testSupabaseUrlNormalizationAndErrorLogging();
+  await testLoginRateLimitingAndFailOpen();
   await testLoginLogoutSessionAndCsrf();
   await testKeyCompatibilityAcrossAllRoutes(SB_SECRET);
   await testKeyCompatibilityAcrossAllRoutes(LEGACY_JWT);

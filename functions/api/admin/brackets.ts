@@ -8,6 +8,7 @@ import {
 } from "../../../lib/server/admin-auth";
 import {
   getSupabaseConfig,
+  logSupabaseError,
   supabaseFetch,
 } from "../../../lib/server/supabase-rest";
 
@@ -102,6 +103,7 @@ export async function onRequest(context: PagesContext): Promise<Response> {
         }),
       });
       if (!sbRes.ok) {
+        await logSupabaseError("PUT /api/admin/brackets", sbRes);
         return adminJsonResponse(
           { ok: false, error: "Failed to save bracket." },
           502,
@@ -125,6 +127,7 @@ export async function onRequest(context: PagesContext): Promise<Response> {
       { method: "DELETE" },
     );
     if (!sbRes.ok) {
+      await logSupabaseError("DELETE /api/admin/brackets", sbRes);
       return adminJsonResponse(
         { ok: false, error: "Failed to delete bracket." },
         502,

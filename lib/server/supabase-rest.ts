@@ -1,6 +1,6 @@
 // Shared server-side Supabase REST helper for Cloudflare Pages Functions.
 
-import type { AdminEnv } from "./admin-auth";
+import { normalizeSecretEnv, type AdminEnv } from "./admin-auth";
 
 export interface SupabaseConfig {
   url: string;
@@ -8,10 +8,25 @@ export interface SupabaseConfig {
 }
 
 export function getSupabaseConfig(env: AdminEnv): SupabaseConfig | null {
-  const url = env.SUPABASE_URL?.trim().replace(/\/+$/, "");
-  const secretKey = env.SUPABASE_SECRET_KEY?.trim();
+  const rawUrl = normalizeSecretEnv(env.SUPABASE_URL);
+  const url = rawUrl
+    .replace(/\/+$/, "")
+    .replace(/\/rest\/v1$/i, "")
+    .replace(/\/+$/, "");
+  const secretKey = normalizeSecretEnv(env.SUPABASE_SECRET_KEY);
   if (!url || !secretKey) return null;
   return { url, secretKey };
+}
+
+/**
+ * Logs non-OK Supabase REST responses without ever printing keys or headers.
+ */
+export async function logSupabaseError(
+  route: string,
+  response: Response,
+): Promise<void> {
+  const body = (await response.clone().text().catch(() => "")).slice(0, 300);
+  console.error("[supabase]", route, response.status, body);
 }
 
 /**

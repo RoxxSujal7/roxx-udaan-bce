@@ -14,6 +14,7 @@ import {
 } from "../../../lib/server/ntfy";
 import {
   getSupabaseConfig,
+  logSupabaseError,
   supabaseFetch,
   type SupabaseConfig,
 } from "../../../lib/server/supabase-rest";
@@ -110,7 +111,10 @@ async function resolveTeamNames(
     cfg,
     `teams?id=in.(${inClause})&select=id,name`,
   );
-  if (!res.ok) return map;
+  if (!res.ok) {
+    await logSupabaseError("GET /api/admin/matches (resolveTeamNames)", res);
+    return map;
+  }
   const rows = (await res.json()) as Array<{ id: string; name: string }>;
   for (const r of rows) map.set(r.id, r.name);
   return map;
@@ -452,6 +456,7 @@ export async function onRequest(context: PagesContext): Promise<Response> {
         `matches?id=eq.${encodeURIComponent(id)}&select=*`,
       );
       if (!existingRes.ok) {
+        await logSupabaseError("POST /api/admin/matches (finish load)", existingRes);
         return adminJsonResponse({ ok: false, error: "Failed to load match." }, 502);
       }
       const existingRows = (await existingRes.json()) as Array<Record<string, unknown>>;
@@ -494,6 +499,7 @@ export async function onRequest(context: PagesContext): Promise<Response> {
         }),
       });
       if (!rpcRes.ok) {
+        await logSupabaseError("POST /api/admin/matches (finish rpc)", rpcRes);
         return adminJsonResponse(
           { ok: false, error: "Failed to record match result." },
           502,
@@ -504,6 +510,9 @@ export async function onRequest(context: PagesContext): Promise<Response> {
         cfg,
         `matches?id=eq.${encodeURIComponent(id)}&select=*`,
       );
+      if (!refreshedRes.ok) {
+        await logSupabaseError("POST /api/admin/matches (finish refresh)", refreshedRes);
+      }
       const refreshedRows = refreshedRes.ok
         ? ((await refreshedRes.json()) as Array<Record<string, unknown>>)
         : [prev];
@@ -572,6 +581,7 @@ export async function onRequest(context: PagesContext): Promise<Response> {
         body: JSON.stringify(rows),
       });
       if (!sbRes.ok) {
+        await logSupabaseError("POST /api/admin/matches", sbRes);
         return adminJsonResponse(
           { ok: false, error: "Failed to save match(es) to database." },
           502,
@@ -613,6 +623,7 @@ export async function onRequest(context: PagesContext): Promise<Response> {
         `matches?id=eq.${encodeURIComponent(id)}&select=id,status,round,event,team_a,team_b,team_a_id,team_b_id,venue,result`,
       );
       if (!prevRes.ok) {
+        await logSupabaseError("PATCH /api/admin/matches (load)", prevRes);
         return adminJsonResponse(
           { ok: false, error: "Failed to load match." },
           502,
@@ -687,6 +698,7 @@ export async function onRequest(context: PagesContext): Promise<Response> {
         body: JSON.stringify(res.data),
       });
       if (!sbRes.ok) {
+        await logSupabaseError("PATCH /api/admin/matches", sbRes);
         return adminJsonResponse(
           { ok: false, error: "Failed to update match in database." },
           502,
@@ -728,6 +740,7 @@ export async function onRequest(context: PagesContext): Promise<Response> {
       { method: "DELETE" },
     );
     if (!sbRes.ok) {
+      await logSupabaseError("DELETE /api/admin/matches", sbRes);
       return adminJsonResponse(
         { ok: false, error: "Failed to delete match from database." },
         502,
