@@ -118,7 +118,7 @@ var ALLOWED_YEARS = /* @__PURE__ */ new Set([
   "PG / Other"
 ]);
 var FIXED_COLLEGE = "Bhagalpur College of Engineering";
-var ROLL_NUMBER_REGEX = /^[A-Za-z0-9/-]{3,40}$/;
+var ROLL_NUMBER_REGEX = /^\d{3,40}$/;
 var MAX_TEAM_MEMBERS = 15;
 var MAX_BODY_BYTES = 16 * 1024;
 var UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -219,7 +219,7 @@ async function onRequestPost(context) {
     return jsonResponse(
       {
         ok: false,
-        error: "Roll / Registration number is required (3\u201340 chars, letters, digits, - or /)."
+        error: "Roll / Registration number is required (3\u201340 digits only)."
       },
       400
     );
@@ -318,7 +318,7 @@ async function onRequestPost(context) {
         return jsonResponse(
           {
             ok: false,
-            error: `Teammate ${i + 1}: registration number must be 3\u201340 chars (letters, digits, - or /).`
+            error: `Teammate ${i + 1}: registration number must be 3\u201340 digits only.`
           },
           400
         );

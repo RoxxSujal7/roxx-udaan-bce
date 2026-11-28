@@ -99,7 +99,7 @@ export interface RegistrationFormData {
 }
 
 const FIXED_COLLEGE = "Bhagalpur College of Engineering";
-const ROLL_NUMBER_REGEX = /^[A-Za-z0-9/-]{3,40}$/;
+const ROLL_NUMBER_REGEX = /^\d{3,40}$/;
 const MAX_TEAM_MEMBERS = 15;
 const DEPARTMENT_OPTIONS = [
   { value: "CSE", label: "Computer Science & Engineering" },
@@ -217,6 +217,7 @@ const OnboardingForm = () => {
   );
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [stepError, setStepError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [submittedReceipt, setSubmittedReceipt] = useState<{
     registrationId: string;
     createdAt: string;
@@ -240,6 +241,7 @@ const OnboardingForm = () => {
   ) => {
     setSubmitError(null);
     setStepError(null);
+    setFieldErrors({});
     setFormData((prev) => ({
       ...prev,
       teamMemberDetails: prev.teamMemberDetails.map((member, i) =>
@@ -251,6 +253,7 @@ const OnboardingForm = () => {
   const addTeammate = () => {
     setSubmitError(null);
     setStepError(null);
+    setFieldErrors({});
     setFormData((prev) => {
       if (prev.teamMemberDetails.length >= MAX_TEAM_MEMBERS) return prev;
       return {
@@ -263,6 +266,7 @@ const OnboardingForm = () => {
   const removeTeammate = (index: number) => {
     setSubmitError(null);
     setStepError(null);
+    setFieldErrors({});
     setFormData((prev) => {
       if (prev.teamMemberDetails.length <= 1) return prev;
       return {
@@ -278,12 +282,14 @@ const OnboardingForm = () => {
   ) => {
     setSubmitError(null);
     setStepError(null);
+    setFieldErrors({});
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
   const toggleEvent = (eventName: string) => {
     setSubmitError(null);
     setStepError(null);
+    setFieldErrors({});
     setFormData((prev) => {
       const exists = prev.events.includes(eventName);
       const nextEvents = exists
@@ -307,99 +313,127 @@ const OnboardingForm = () => {
     });
   };
 
-  const getStepValidationError = (stepIndex: number): string | null => {
+  const getStepFieldErrors = (stepIndex: number): Record<string, string> => {
+    const errors: Record<string, string> = {};
     switch (stepIndex) {
       case 0: {
         if (formData.fullName.trim().length < 2) {
-          return "Please enter your full name (at least 2 characters).";
+          errors.fullName = "Please enter your full name (at least 2 characters).";
         }
         if (!EMAIL_REGEX.test(formData.email.trim())) {
-          return "Please enter a valid email address.";
+          errors.email = "Please enter a valid email address.";
         }
         if (!isValidIndianPhone(formData.phone)) {
-          return "Please enter a valid 10-digit Indian mobile number (+91).";
+          errors.phone = "Please enter a valid 10-digit Indian mobile number (+91).";
         }
-        return null;
+        return errors;
       }
       case 1: {
         const roll = formData.rollNumber.trim();
         if (!ROLL_NUMBER_REGEX.test(roll)) {
-          return "Roll / Registration number is required (3–40 characters; letters, digits, - or / only).";
+          errors.rollNumber =
+            "Roll / Registration number is required (3–40 digits only).";
         }
         if (!formData.department) {
-          return "Please select your department / branch.";
+          errors.department = "Please select your department / branch.";
         }
         if (!formData.academicYear) {
-          return "Please select your academic year.";
+          errors.academicYear = "Please select your academic year.";
         }
-        return null;
+        return errors;
       }
       case 2:
-        return formData.events.length >= 1
-          ? null
-          : "Please select at least one UDAAN 2026 or IGNITION 2026 event.";
+        if (formData.events.length < 1) {
+          errors.events =
+            "Please select at least one UDAAN 2026 or IGNITION 2026 event.";
+        }
+        return errors;
       case 3: {
-        if (!isTeamEntry) return null;
+        if (!isTeamEntry) return errors;
         if (formData.teamName.trim().length < 2) {
-          return "Please enter a team name (at least 2 characters) for team entries.";
+          errors.teamName =
+            "Please enter a team name (at least 2 characters) for team entries.";
         }
         if (
           formData.teamMemberDetails.length < 1 ||
           formData.teamMemberDetails.length > MAX_TEAM_MEMBERS
         ) {
-          return `Team entries require between 1 and ${MAX_TEAM_MEMBERS} teammates.`;
+          errors["member-name-0"] =
+            `Team entries require between 1 and ${MAX_TEAM_MEMBERS} teammates.`;
+          return errors;
         }
-        const participantRoll = formData.rollNumber.trim().toLowerCase();
+        const participantRoll = formData.rollNumber.trim();
         const seenRolls = new Set<string>();
         for (let i = 0; i < formData.teamMemberDetails.length; i++) {
           const m = formData.teamMemberDetails[i];
           if (m.name.trim().length < 2) {
-            return `Teammate ${i + 1}: please enter their full name (at least 2 characters).`;
+            errors[`member-name-${i}`] =
+              `Teammate ${i + 1}: please enter their full name (at least 2 characters).`;
           }
           const mRoll = m.rollNumber.trim();
           if (!ROLL_NUMBER_REGEX.test(mRoll)) {
-            return `Teammate ${i + 1}: registration number must be 3–40 characters (letters, digits, - or /).`;
+            errors[`member-roll-${i}`] =
+              `Teammate ${i + 1}: registration number must be 3–40 digits only.`;
+          } else if (participantRoll && mRoll === participantRoll) {
+            errors[`member-roll-${i}`] =
+              `Teammate ${i + 1}: registration number cannot match your own roll number.`;
+          } else if (seenRolls.has(mRoll)) {
+            errors[`member-roll-${i}`] =
+              `Teammate ${i + 1}: duplicate registration number (${mRoll}).`;
+          } else {
+            seenRolls.add(mRoll);
           }
-          const mRollKey = mRoll.toLowerCase();
-          if (participantRoll && mRollKey === participantRoll) {
-            return `Teammate ${i + 1}: registration number cannot match your own roll number.`;
-          }
-          if (seenRolls.has(mRollKey)) {
-            return `Teammate ${i + 1}: duplicate registration number (${mRoll}).`;
-          }
-          seenRolls.add(mRollKey);
           if (!m.department) {
-            return `Teammate ${i + 1}: please select a branch.`;
+            errors[`member-dept-${i}`] = `Teammate ${i + 1}: please select a branch.`;
           }
           if (!m.academicYear) {
-            return `Teammate ${i + 1}: please select an academic year.`;
+            errors[`member-year-${i}`] =
+              `Teammate ${i + 1}: please select an academic year.`;
           }
         }
-        return null;
+        return errors;
       }
       case 4:
-        return formData.notes.length <= 500
-          ? null
-          : "Notes must be 500 characters or fewer.";
+        if (formData.notes.length > 500) {
+          errors.notes = "Notes must be 500 characters or fewer.";
+        }
+        return errors;
       case 5:
         if (formData.confirmedDetails !== true) {
-          return "Please confirm that all details are correct and agree to the event rules.";
+          errors.confirmedDetails =
+            "Please confirm that all details are correct and agree to the event rules.";
         }
         if (isTeamEntry && formData.teamConfirmed !== true) {
-          return "Please confirm that all team members have agreed to participate and their details are correct.";
+          errors.teamConfirmed =
+            "Please confirm that all team members have agreed to participate and their details are correct.";
         }
-        return null;
+        return errors;
       default:
-        return null;
+        return errors;
     }
   };
 
+  const focusFirstErrorField = (errors: Record<string, string>) => {
+    const firstId = Object.keys(errors)[0];
+    if (!firstId || typeof window === "undefined") return;
+    requestAnimationFrame(() => {
+      const el = document.getElementById(firstId);
+      if (el && typeof el.focus === "function") {
+        el.focus();
+      }
+    });
+  };
+
   const nextStep = () => {
-    const err = getStepValidationError(currentStep);
-    if (err) {
-      setStepError(err);
+    const errors = getStepFieldErrors(currentStep);
+    const firstMsg = Object.values(errors)[0] ?? null;
+    if (firstMsg) {
+      setFieldErrors(errors);
+      setStepError(firstMsg);
+      focusFirstErrorField(errors);
       return;
     }
+    setFieldErrors({});
     setStepError(null);
     if (currentStep < steps.length - 1) {
       setCurrentStep((prev) => prev + 1);
@@ -407,6 +441,7 @@ const OnboardingForm = () => {
   };
 
   const prevStep = () => {
+    setFieldErrors({});
     setStepError(null);
     if (currentStep > 0) {
       setCurrentStep((prev) => prev - 1);
@@ -414,9 +449,12 @@ const OnboardingForm = () => {
   };
 
   const handleSubmit = async () => {
-    const err = getStepValidationError(currentStep);
-    if (err) {
-      setStepError(err);
+    const errors = getStepFieldErrors(currentStep);
+    const firstMsg = Object.values(errors)[0] ?? null;
+    if (firstMsg) {
+      setFieldErrors(errors);
+      setStepError(firstMsg);
+      focusFirstErrorField(errors);
       return;
     }
     if (isSubmitting) return;
@@ -493,12 +531,14 @@ const OnboardingForm = () => {
     setFormData(initialFormData);
     setSubmittedReceipt(null);
     setSubmitError(null);
+    setFieldErrors({});
     setSubmissionId(generateSubmissionId());
     setCurrentStep(0);
   };
 
   // Check if step is valid
-  const isStepValid = () => getStepValidationError(currentStep) === null;
+  const isStepValid = () =>
+    Object.keys(getStepFieldErrors(currentStep)).length === 0;
 
   const handleFormSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -679,12 +719,21 @@ const OnboardingForm = () => {
                           placeholder="e.g. Aarav Kumar"
                           maxLength={120}
                           required
+                          aria-invalid={Boolean(fieldErrors.fullName)}
+                          aria-describedby={
+                            fieldErrors.fullName ? "fullName-error" : undefined
+                          }
                           value={formData.fullName}
                           onChange={(e) =>
                             updateFormData("fullName", e.target.value)
                           }
                           className="transition-all duration-300 focus:ring-2 focus:ring-primary/20 focus:border-primary"
                         />
+                        {fieldErrors.fullName && (
+                          <p id="fullName-error" role="alert" className="text-xs text-destructive">
+                            {fieldErrors.fullName}
+                          </p>
+                        )}
                       </motion.div>
                       <motion.div variants={fadeInUp} className="space-y-2">
                         <Label htmlFor="email">Email Address *</Label>
@@ -694,12 +743,21 @@ const OnboardingForm = () => {
                           placeholder="you@example.com"
                           maxLength={160}
                           required
+                          aria-invalid={Boolean(fieldErrors.email)}
+                          aria-describedby={
+                            fieldErrors.email ? "email-error" : undefined
+                          }
                           value={formData.email}
                           onChange={(e) =>
                             updateFormData("email", e.target.value)
                           }
                           className="transition-all duration-300 focus:ring-2 focus:ring-primary/20 focus:border-primary"
                         />
+                        {fieldErrors.email && (
+                          <p id="email-error" role="alert" className="text-xs text-destructive">
+                            {fieldErrors.email}
+                          </p>
+                        )}
                       </motion.div>
                       <motion.div variants={fadeInUp} className="space-y-2">
                         <Label htmlFor="phone">Mobile Number *</Label>
@@ -707,7 +765,7 @@ const OnboardingForm = () => {
                           <div
                             aria-label="Country code +91"
                             style={{ width: "4.5rem", flex: "0 0 4.5rem" }}
-                            className="shrink-0 h-9 rounded-md border bg-muted/60 px-3 flex items-center justify-center text-sm font-medium text-muted-foreground select-none"
+                            className="shrink-0 h-10 rounded-md border bg-muted/60 px-3 flex items-center justify-center text-sm font-medium text-foreground select-none"
                           >
                             +91
                           </div>
@@ -719,6 +777,10 @@ const OnboardingForm = () => {
                             placeholder="10-digit Indian mobile number"
                             maxLength={20}
                             required
+                            aria-invalid={Boolean(fieldErrors.phone)}
+                            aria-describedby={
+                              fieldErrors.phone ? "phone-error" : undefined
+                            }
                             value={formData.phone}
                             onChange={(e) =>
                               updateFormData("phone", e.target.value)
@@ -727,9 +789,15 @@ const OnboardingForm = () => {
                             className="transition-all duration-300 focus:ring-2 focus:ring-primary/20 focus:border-primary"
                           />
                         </div>
-                        <p className="text-xs text-muted-foreground">
-                          Indian mobile numbers only (+91).
-                        </p>
+                        {fieldErrors.phone ? (
+                          <p id="phone-error" role="alert" className="text-xs text-destructive">
+                            {fieldErrors.phone}
+                          </p>
+                        ) : (
+                          <p className="text-xs text-muted-foreground">
+                            Indian mobile numbers only (+91).
+                          </p>
+                        )}
                       </motion.div>
                       <motion.div variants={fadeInUp} className="space-y-2">
                         <Label htmlFor="college">
@@ -739,9 +807,8 @@ const OnboardingForm = () => {
                           id="college"
                           value={FIXED_COLLEGE}
                           readOnly
-                          disabled
                           aria-readonly="true"
-                          className="bg-muted/60 text-muted-foreground cursor-not-allowed"
+                          className="bg-muted/50 text-foreground cursor-default"
                         />
                       </motion.div>
                     </CardContent>
@@ -764,15 +831,32 @@ const OnboardingForm = () => {
                         </Label>
                         <Input
                           id="rollNumber"
+                          type="text"
+                          inputMode="numeric"
+                          pattern="[0-9]*"
                           placeholder="e.g. 23101105001"
                           maxLength={40}
                           required
+                          aria-invalid={Boolean(fieldErrors.rollNumber)}
+                          aria-describedby={
+                            fieldErrors.rollNumber
+                              ? "rollNumber-error"
+                              : undefined
+                          }
                           value={formData.rollNumber}
                           onChange={(e) =>
-                            updateFormData("rollNumber", e.target.value)
+                            updateFormData(
+                              "rollNumber",
+                              e.target.value.replace(/\D/g, ""),
+                            )
                           }
                           className="transition-all duration-300 focus:ring-2 focus:ring-primary/20 focus:border-primary"
                         />
+                        {fieldErrors.rollNumber && (
+                          <p id="rollNumber-error" role="alert" className="text-xs text-destructive">
+                            {fieldErrors.rollNumber}
+                          </p>
+                        )}
                       </motion.div>
 
                       <motion.div variants={fadeInUp} className="space-y-2">
@@ -788,6 +872,12 @@ const OnboardingForm = () => {
                           <SelectTrigger
                             id="department"
                             aria-required="true"
+                            aria-invalid={Boolean(fieldErrors.department)}
+                            aria-describedby={
+                              fieldErrors.department
+                                ? "department-error"
+                                : undefined
+                            }
                             className="transition-all duration-300 focus:ring-2 focus:ring-primary/20 focus:border-primary"
                           >
                             <SelectValue placeholder="Select department" />
@@ -800,6 +890,11 @@ const OnboardingForm = () => {
                             ))}
                           </SelectContent>
                         </Select>
+                        {fieldErrors.department && (
+                          <p id="department-error" role="alert" className="text-xs text-destructive">
+                            {fieldErrors.department}
+                          </p>
+                        )}
                       </motion.div>
 
                       <motion.div variants={fadeInUp} className="space-y-2">
@@ -815,6 +910,12 @@ const OnboardingForm = () => {
                           <SelectTrigger
                             id="academicYear"
                             aria-required="true"
+                            aria-invalid={Boolean(fieldErrors.academicYear)}
+                            aria-describedby={
+                              fieldErrors.academicYear
+                                ? "academicYear-error"
+                                : undefined
+                            }
                             className="transition-all duration-300 focus:ring-2 focus:ring-primary/20 focus:border-primary"
                           >
                             <SelectValue placeholder="Select academic year" />
@@ -827,6 +928,11 @@ const OnboardingForm = () => {
                             ))}
                           </SelectContent>
                         </Select>
+                        {fieldErrors.academicYear && (
+                          <p id="academicYear-error" role="alert" className="text-xs text-destructive">
+                            {fieldErrors.academicYear}
+                          </p>
+                        )}
                       </motion.div>
                     </CardContent>
                   </>
@@ -1021,12 +1127,24 @@ const OnboardingForm = () => {
                                   id="teamName"
                                   placeholder="Enter your team name"
                                   maxLength={100}
+                                  required
+                                  aria-invalid={Boolean(fieldErrors.teamName)}
+                                  aria-describedby={
+                                    fieldErrors.teamName
+                                      ? "teamName-error"
+                                      : undefined
+                                  }
                                   value={formData.teamName}
                                   onChange={(e) =>
                                     updateFormData("teamName", e.target.value)
                                   }
                                   className="transition-all duration-300 focus:ring-2 focus:ring-primary/20 focus:border-primary"
                                 />
+                                {fieldErrors.teamName && (
+                                  <p id="teamName-error" role="alert" className="text-xs text-destructive">
+                                    {fieldErrors.teamName}
+                                  </p>
+                                )}
                               </motion.div>
                               <motion.div
                                 variants={fadeInUp}
@@ -1048,17 +1166,18 @@ const OnboardingForm = () => {
                                         <span className="text-xs font-medium text-muted-foreground">
                                           Teammate {idx + 1}
                                         </span>
-                                        <Button
-                                          type="button"
-                                          variant="ghost"
-                                          size="sm"
-                                          onClick={() => removeTeammate(idx)}
-                                          disabled={formData.teamMemberDetails.length <= 1}
-                                          aria-label={`Remove teammate ${idx + 1}`}
-                                          className="h-8 px-2 text-muted-foreground hover:text-destructive"
-                                        >
-                                          <Trash2 className="h-4 w-4" />
-                                        </Button>
+                                        {formData.teamMemberDetails.length > 1 && (
+                                          <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => removeTeammate(idx)}
+                                            aria-label={`Remove teammate ${idx + 1}`}
+                                            className="min-h-[44px] min-w-[44px] px-2 text-muted-foreground hover:text-destructive"
+                                          >
+                                            <Trash2 className="h-4 w-4" />
+                                          </Button>
+                                        )}
                                       </div>
                                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                         <div className="space-y-1.5">
@@ -1070,11 +1189,26 @@ const OnboardingForm = () => {
                                             placeholder="Teammate full name"
                                             maxLength={120}
                                             required
+                                            aria-invalid={Boolean(fieldErrors[`member-name-${idx}`])}
+                                            aria-describedby={
+                                              fieldErrors[`member-name-${idx}`]
+                                                ? `member-name-${idx}-error`
+                                                : undefined
+                                            }
                                             value={member.name}
                                             onChange={(e) =>
                                               updateTeammate(idx, "name", e.target.value)
                                             }
                                           />
+                                          {fieldErrors[`member-name-${idx}`] && (
+                                            <p
+                                              id={`member-name-${idx}-error`}
+                                              role="alert"
+                                              className="text-xs text-destructive"
+                                            >
+                                              {fieldErrors[`member-name-${idx}`]}
+                                            </p>
+                                          )}
                                         </div>
                                         <div className="space-y-1.5">
                                           <Label htmlFor={`member-roll-${idx}`}>
@@ -1082,14 +1216,36 @@ const OnboardingForm = () => {
                                           </Label>
                                           <Input
                                             id={`member-roll-${idx}`}
+                                            type="text"
+                                            inputMode="numeric"
+                                            pattern="[0-9]*"
                                             placeholder="e.g. 23101105002"
                                             maxLength={40}
                                             required
+                                            aria-invalid={Boolean(fieldErrors[`member-roll-${idx}`])}
+                                            aria-describedby={
+                                              fieldErrors[`member-roll-${idx}`]
+                                                ? `member-roll-${idx}-error`
+                                                : undefined
+                                            }
                                             value={member.rollNumber}
                                             onChange={(e) =>
-                                              updateTeammate(idx, "rollNumber", e.target.value)
+                                              updateTeammate(
+                                                idx,
+                                                "rollNumber",
+                                                e.target.value.replace(/\D/g, ""),
+                                              )
                                             }
                                           />
+                                          {fieldErrors[`member-roll-${idx}`] && (
+                                            <p
+                                              id={`member-roll-${idx}-error`}
+                                              role="alert"
+                                              className="text-xs text-destructive"
+                                            >
+                                              {fieldErrors[`member-roll-${idx}`]}
+                                            </p>
+                                          )}
                                         </div>
                                         <div className="space-y-1.5">
                                           <Label htmlFor={`member-dept-${idx}`}>
@@ -1104,6 +1260,12 @@ const OnboardingForm = () => {
                                             <SelectTrigger
                                               id={`member-dept-${idx}`}
                                               aria-required="true"
+                                              aria-invalid={Boolean(fieldErrors[`member-dept-${idx}`])}
+                                              aria-describedby={
+                                                fieldErrors[`member-dept-${idx}`]
+                                                  ? `member-dept-${idx}-error`
+                                                  : undefined
+                                              }
                                             >
                                               <SelectValue placeholder="Select branch" />
                                             </SelectTrigger>
@@ -1115,6 +1277,15 @@ const OnboardingForm = () => {
                                               ))}
                                             </SelectContent>
                                           </Select>
+                                          {fieldErrors[`member-dept-${idx}`] && (
+                                            <p
+                                              id={`member-dept-${idx}-error`}
+                                              role="alert"
+                                              className="text-xs text-destructive"
+                                            >
+                                              {fieldErrors[`member-dept-${idx}`]}
+                                            </p>
+                                          )}
                                         </div>
                                         <div className="space-y-1.5">
                                           <Label htmlFor={`member-year-${idx}`}>
@@ -1129,6 +1300,12 @@ const OnboardingForm = () => {
                                             <SelectTrigger
                                               id={`member-year-${idx}`}
                                               aria-required="true"
+                                              aria-invalid={Boolean(fieldErrors[`member-year-${idx}`])}
+                                              aria-describedby={
+                                                fieldErrors[`member-year-${idx}`]
+                                                  ? `member-year-${idx}-error`
+                                                  : undefined
+                                              }
                                             >
                                               <SelectValue placeholder="Select year" />
                                             </SelectTrigger>
@@ -1140,6 +1317,15 @@ const OnboardingForm = () => {
                                               ))}
                                             </SelectContent>
                                           </Select>
+                                          {fieldErrors[`member-year-${idx}`] && (
+                                            <p
+                                              id={`member-year-${idx}-error`}
+                                              role="alert"
+                                              className="text-xs text-destructive"
+                                            >
+                                              {fieldErrors[`member-year-${idx}`]}
+                                            </p>
+                                          )}
                                         </div>
                                       </div>
                                     </div>
@@ -1151,7 +1337,7 @@ const OnboardingForm = () => {
                                   size="sm"
                                   onClick={addTeammate}
                                   disabled={formData.teamMemberDetails.length >= MAX_TEAM_MEMBERS}
-                                  className="w-full sm:w-auto rounded-xl"
+                                  className="w-full sm:w-auto min-h-[44px] rounded-xl"
                                 >
                                   <Plus className="h-4 w-4 mr-1" /> Add teammate
                                 </Button>
@@ -1415,7 +1601,7 @@ const OnboardingForm = () => {
                   variant="outline"
                   onClick={prevStep}
                   disabled={currentStep === 0 || isSubmitting}
-                  className="flex items-center gap-1 transition-all duration-300 rounded-2xl"
+                  className="flex items-center gap-1 min-h-[44px] transition-all duration-300 rounded-2xl"
                 >
                   <ChevronLeft className="h-4 w-4" /> Back
                 </Button>
@@ -1433,7 +1619,7 @@ const OnboardingForm = () => {
                         (isTeamEntry && !formData.teamConfirmed)))
                   }
                   className={cn(
-                    "flex items-center gap-1 transition-all duration-300 rounded-2xl",
+                    "flex items-center gap-1 min-h-[44px] transition-all duration-300 rounded-2xl",
                   )}
                 >
                   {isSubmitting ? (
