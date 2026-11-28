@@ -194,6 +194,16 @@ Never commit `.dev.vars`, `.env` files, or secret keys to Git.
 
 ---
 
+## Re-enabling LIVE
+
+The public LIVE scoreboards, homepage live strip, and live alerts are temporarily hidden (admin live controls and API routes remain active). To restore them:
+
+1. **`index.html`:** Uncomment `Scripts/live-strip.bundle.{css,js}`, `Scripts/live-alerts.bundle.{css,js}`, `<div id="live-strip-root"></div>`, and `<a href="Templates/live.html">LIVE</a>` in `.ham-links` (marked `<!-- LIVE HIDDEN (temporary): restore by uncommenting -->`).
+2. **`Templates/{archive,developers,director,gallery,ignition,registration}.html`:** Uncomment `../Scripts/live-alerts.bundle.{css,js}` and `<a href="./live.html">LIVE</a>` in `.ham-links` (marked `<!-- LIVE HIDDEN (temporary): restore by uncommenting -->`).
+3. **`Templates/live.html`:** Remove `<meta name="robots" content="noindex" />`, `<meta http-equiv="refresh" ... />`, and `window.location.replace("../index.html")` in `<head>`.
+
+---
+
 ## Credits & Attribution
 
 - **Developers page footer:** `Original design by Roxx` (on `Templates/developers.html`).

@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Torchbearers — UDAAN 2026</title>
+  <meta name="description" content="Torchbearers of UDAAN at Bhagalpur College of Engineering (BCE), Bhagalpur — Presidents past and present." />
+  <link rel="canonical" href="https://roxx-udaan-bce.pages.dev/Templates/torchbearers" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="UDAAN 2026" />
+  <meta property="og:title" content="Torchbearers — UDAAN 2026" />
+  <meta property="og:description" content="Presidents of UDAAN, past &amp; present at Bhagalpur College of Engineering (BCE), Bhagalpur." />
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="Torchbearers — UDAAN 2026" />
+  <meta name="twitter:description" content="Presidents of UDAAN, past &amp; present at Bhagalpur College of Engineering (BCE), Bhagalpur." />
+  <link href="https://fonts.googleapis.com" rel="preconnect" />
+  <link crossorigin href="https://fonts.gstatic.com" rel="preconnect" />
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="../Assets/Logo.png" rel="shortcut icon" type="image/x-icon" />
+  <link rel="stylesheet" href="../Styles/index.css" />
+  <link rel="stylesheet" href="../Styles/torchbearers.css" />
+  <link href="../Styles/loader.css" rel="stylesheet" />
+
+  <script defer src="../Scripts/hamburger.js"></script>
+  <script defer src="../Scripts/loader.js"></script>
+  <script defer src="../Scripts/torchbearers-data.js"></script>
+  <script defer src="../Scripts/footer.bundle.js"></script>
+</head>
+
+<body>
+  <div class="loader">
+    <div class="video-wrapper">
+      <video autoplay loop muted playsinline id="video" width="100%">
+        <source src="../Assets/loader.mp4" type="video/mp4" />
+      </video>
+      <div class="shadow"></div>
+    </div>
+    <div class="hide">CLICK TO CONTINUE</div>
+  </div>
+
+  <div class="ham-grid">
+    <div class="ham-logo ham-hide"><img src="../Assets/ham-logo.png" alt="" /></div>
+    <div class="ham-img ham-hide">
+      <img src="../Assets/ham-img.png" alt="" /><span></span>
+    </div>
+
+    <div class="ham-links">
+      <div>
+        <a href="../index.html">HOME</a>
+        <!-- LIVE HIDDEN (temporary): restore by uncommenting <a href="./live.html">LIVE</a> -->
+        <a href="./torchbearers.html">TORCHBEARERS</a>
+        <a href="./registration.html">REGISTRATION</a>
+        <a href="./ignition.html">IGNITION</a>
+        <a href="./gallery.html">GALLERY</a>
+        <a href="./archive.html">ARCHIVE</a>
+        <a href="./director.html">PRINCIPAL'S MESSAGE</a>
+        <a style="display: none" href="#">LOGIN</a>
+        <a href="./developers.html">DEVELOPERS</a>
+      </div>
+    </div>
+
+    <div class="ham-text ham-hide">
+      <img src="../Assets/ham-text.png" alt="" /><span></span>
+    </div>
+    <div class="ham-icons ham-hide">
+      <a href="https://www.facebook.com/profile.php?id=61552059662887" target="_blank" rel="noopener noreferrer" aria-label="BCE Facebook">
+        <img aria-hidden="true" src="../Assets/Facebook.png" alt="" class="ham-icon" />
+      </a>
+      <a href="https://www.instagram.com/udaan_bce/" target="_blank" rel="noopener noreferrer" aria-label="UDAAN Instagram">
+        <img aria-hidden="true" src="../Assets/Instagram.png" alt="" class="ham-icon" />
+      </a>
+    </div>
+  </div>
+
+  <nav class="nav absolute" aria-label="Primary navigation">
+    <div class="right">
+      <div class="ham-cont">
+        <div class="hamburger" role="button" tabindex="0" aria-label="Open navigation menu">
+          <span class="ham-1"></span>
+          <span class="ham-2"></span>
+          <span class="ham-3"></span>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <main id="main-content" class="tb-page">
+    <img class="tb-donut tb-donut-1" src="../Assets/donut2.png" alt="" aria-hidden="true" />
+    <img class="tb-donut tb-donut-2" src="../Assets/donut.png" alt="" aria-hidden="true" />
+
+    <div class="tb-container">
+      <header class="tb-header">
+        <h1 class="sec-header">TORCHBEARERS</h1>
+        <p class="tb-subtitle">Presidents of UDAAN, past &amp; present</p>
+      </header>
+
+      <section class="tb-current-section" aria-labelledby="tb-current-heading">
+        <h2 id="tb-current-heading" class="tb-section-title">Current President</h2>
+        <div id="tb-current-mount"></div>
+      </section>
+
+      <section aria-labelledby="tb-past-heading">
+        <h2 id="tb-past-heading" class="tb-section-title">Past Presidents</h2>
+        <ol id="tb-timeline-mount" class="tb-timeline"></ol>
+      </section>
+    </div>
+  </main>
+
+  <div id="udaan-footer-root"></div>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      var list = Array.isArray(window.UDAAN_TORCHBEARERS) ? window.UDAAN_TORCHBEARERS : [];
+      var current = list.find(function (p) { return p && p.isCurrent; }) || list[0];
+      var past = list.filter(function (p) { return p && p !== current; });
+
+      var currentMount = document.getElementById("tb-current-mount");
+      if (currentMount && current) {
+        var article = document.createElement("article");
+        article.className = "tb-hero-card tb-reveal";
+
+        var media = document.createElement("div");
+        media.className = "tb-hero-media";
+        var img = document.createElement("img");
+        img.src = current.photo || "../Assets/presidents/placeholder.svg";
+        img.alt = current.name || "Current President";
+        img.width = 240;
+        img.height = 240;
+        media.appendChild(img);
+
+        var body = document.createElement("div");
+        var badge = document.createElement("span");
+        badge.className = "tb-badge";
+        badge.textContent = "President · " + (current.tenure || "2025–26");
+        body.appendChild(badge);
+
+        var nameEl = document.createElement("h3");
+        nameEl.className = "tb-hero-name";
+        nameEl.textContent = current.name || "";
+        body.appendChild(nameEl);
+
+        if (current.branch) {
+          var meta = document.createElement("p");
+          meta.className = "tb-hero-meta";
+          meta.textContent = current.branch;
+          body.appendChild(meta);
+        }
+
+        if (current.note) {
+          var note = document.createElement("p");
+          note.className = "tb-hero-note";
+          note.textContent = current.note;
+          body.appendChild(note);
+        }
+
+        article.appendChild(media);
+        article.appendChild(body);
+        currentMount.appendChild(article);
+      }
+
+      var timelineMount = document.getElementById("tb-timeline-mount");
+      if (timelineMount) {
+        past.forEach(function (person) {
+          var li = document.createElement("li");
+          li.className = "tb-item tb-reveal";
+
+          var node = document.createElement("span");
+          node.className = "tb-node";
+          node.setAttribute("aria-hidden", "true");
+          li.appendChild(node);
+
+          var card = document.createElement("article");
+          card.className = "tb-card";
+
+          var top = document.createElement("div");
+          top.className = "tb-card-top";
+
+          var avatar = document.createElement("div");
+          avatar.className = "tb-avatar";
+          var pImg = document.createElement("img");
+          pImg.src = person.photo || "../Assets/presidents/placeholder.svg";
+          pImg.alt = person.name || "Past President";
+          pImg.width = 72;
+          pImg.height = 72;
+          pImg.loading = "lazy";
+          pImg.decoding = "async";
+          avatar.appendChild(pImg);
+
+          var info = document.createElement("div");
+          var tenure = document.createElement("span");
+          tenure.className = "tb-tenure";
+          tenure.textContent = person.tenure || "";
+          info.appendChild(tenure);
+
+          var pName = document.createElement("h3");
+          pName.className = "tb-name";
+          pName.textContent = person.name || "";
+          info.appendChild(pName);
+
+          if (person.branch) {
+            var pBranch = document.createElement("p");
+            pBranch.className = "tb-branch";
+            pBranch.textContent = person.branch;
+            info.appendChild(pBranch);
+          }
+
+          top.appendChild(avatar);
+          top.appendChild(info);
+          card.appendChild(top);
+
+          if (person.note) {
+            var pNote = document.createElement("p");
+            pNote.className = "tb-note";
+            pNote.textContent = person.note;
+            card.appendChild(pNote);
+          }
+
+          li.appendChild(card);
+          timelineMount.appendChild(li);
+        });
+      }
+
+      var reveals = document.querySelectorAll(".tb-reveal");
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches || !("IntersectionObserver" in window)) {
+        reveals.forEach(function (el) { el.classList.add("is-visible"); });
+      } else {
+        var obs = new IntersectionObserver(function (entries) {
+          entries.forEach(function (entry) {
+            if (entry.isIntersecting) {
+              entry.target.classList.add("is-visible");
+              obs.unobserve(entry.target);
+            }
+          });
+        }, { threshold: 0.1 });
+        reveals.forEach(function (el) { obs.observe(el); });
+      }
+    });
+  </script>
+</body>
+
+</html>
