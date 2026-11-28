@@ -30,25 +30,25 @@ if (rootEl) {
           {
             title: 'UDAAN',
             links: [
-              { label: 'Home', href: `${prefix}index.html` },
-              { label: 'About Us', href: inTemplates ? `${prefix}index.html#about-sec` : '#about-sec' },
-              { label: "Principal's Message", href: `${prefix}Templates/director.html` },
-              { label: 'Developers', href: `${prefix}Templates/developers.html` },
+              { label: 'Home', href: '/' },
+              { label: 'About Us', href: '/#about-sec' },
+              { label: "Principal's Message", href: '/Templates/director' },
+              { label: 'Developers', href: '/Templates/developers' },
             ],
           },
           {
             title: 'Events',
             links: [
-              { label: 'Events', href: inTemplates ? `${prefix}index.html#eventsHere` : '#eventsHere' },
-              { label: 'IGNITION', href: `${prefix}Templates/ignition.html` },
-              { label: 'Gallery', href: `${prefix}Templates/gallery.html` },
+              { label: 'Events', href: '/#eventsHere' },
+              { label: 'IGNITION', href: '/Templates/ignition' },
+              { label: 'Gallery', href: '/Templates/gallery' },
             ],
           },
           {
             title: 'Information',
             links: [
-              { label: 'Registration', href: `${prefix}Templates/registration.html` },
-              { label: 'Admin', href: `${prefix}Templates/admin.html` },
+              { label: 'Registration', href: '/Templates/registration' },
+              { label: 'Admin', href: '/Templates/admin' },
             ],
           },
           {
@@ -60,8 +60,8 @@ if (rootEl) {
           },
         ]}
         actions={[
-          { label: 'Register Now', href: `${prefix}Templates/registration.html`, icon: 'bolt', variant: 'solid' },
-          { label: 'Explore Events', href: inTemplates ? `${prefix}index.html#eventsHere` : '#eventsHere', icon: 'star', variant: 'outline' },
+          { label: 'Register Now', href: '/Templates/registration', icon: 'bolt', variant: 'solid' },
+          { label: 'Explore Events', href: '/#eventsHere', icon: 'star', variant: 'outline' },
         ]}
         copyright="© 2026 UDAAN Sports Club, Bhagalpur College of Engineering."
         legal={[]}

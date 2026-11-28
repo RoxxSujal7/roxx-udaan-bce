@@ -4,6 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import * as esbuild from "esbuild";
 import sharp from "sharp";
+import { PAGES_SEO, SEO_CONFIG } from "../src/seo-config.mjs";
 
 const ROOT = process.cwd();
 const DIST = path.join(ROOT, "dist");
@@ -198,8 +199,11 @@ copyDir(
   path.join(DIST, "Scripts"),
   new Set(["build-api.mjs", "build-dist.mjs"]),
 );
-if (fs.existsSync(path.join(ROOT, "robots.txt"))) {
-  fs.copyFileSync(path.join(ROOT, "robots.txt"), path.join(DIST, "robots.txt"));
+for (const staticFile of ["robots.txt", "llms.txt", "site.webmanifest", "favicon.ico", "404.html", "_redirects"]) {
+  const srcStatic = path.join(ROOT, staticFile);
+  if (fs.existsSync(srcStatic)) {
+    fs.copyFileSync(srcStatic, path.join(DIST, staticFile));
+  }
 }
 
 // Build content hash map for dist/Assets, dist/Scripts, dist/Styles
@@ -249,9 +253,230 @@ const LAZY_ISLANDS = {
   "esm/events-entry.js": "events-carousel-root",
 };
 
+function escHtml(s) {
+  return String(s)
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+function getGitLastMod(relPath) {
+  try {
+    const out = execFileSync("git", ["log", "-1", "--format=%cI", "--", relPath], {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+    }).trim();
+    if (out) return out.split("T")[0];
+  } catch {}
+  return new Date().toISOString().split("T")[0];
+}
+
+function parseTorchbearersPeople() {
+  const tsPath = path.join(ROOT, "src", "torchbearers-data.ts");
+  if (!fs.existsSync(tsPath)) return [];
+  const src = fs.readFileSync(tsPath, "utf8");
+  const people = [];
+  const yearBlocks = src.split(/year:\s*"(\d{4})"/);
+  for (let i = 1; i < yearBlocks.length; i += 2) {
+    const year = yearBlocks[i];
+    const block = yearBlocks[i + 1] || "";
+    const sheetRe = /image:\s*"([^"]+)"[\s\S]*?code:\s*"([^"]+)"[\s\S]*?title:\s*"([^"]+)"/g;
+    let m;
+    while ((m = sheetRe.exec(block)) !== null) {
+      people.push({ image: m[1], role: m[2], name: m[3], year });
+    }
+  }
+  return people;
+}
+
+const TORCHBEARERS_PEOPLE = parseTorchbearersPeople();
+
+function buildJsonLd(relKey, pageSeo, canonicalUrl) {
+  const O = SEO_CONFIG.CANONICAL_ORIGIN;
+  const E = SEO_CONFIG.EVENT;
+  const addr = {
+    "@type": "PostalAddress",
+    ...(E.streetAddress ? { streetAddress: E.streetAddress } : {}),
+    addressLocality: E.addressLocality,
+    addressRegion: E.addressRegion,
+    ...(E.postalCode ? { postalCode: E.postalCode } : {}),
+    addressCountry: E.addressCountry,
+  };
+  const bceId = `${O}/#bce`;
+  const orgId = `${O}/#organization`;
+  const siteId = `${O}/#website`;
+
+  const graph = [
+    {
+      "@type": "CollegeOrUniversity",
+      "@id": bceId,
+      name: E.venueName,
+      address: addr,
+    },
+    {
+      "@type": "Organization",
+      "@id": orgId,
+      name: "UDAAN Sports Club",
+      url: `${O}/`,
+      logo: `${O}/Assets/icons/icon-512.png`,
+      parentOrganization: { "@id": bceId },
+      sameAs: [SEO_CONFIG.SOCIALS.instagram, SEO_CONFIG.SOCIALS.facebook],
+    },
+    {
+      "@type": "WebSite",
+      "@id": siteId,
+      name: SEO_CONFIG.SITE_NAME,
+      url: `${O}/`,
+      publisher: { "@id": orgId },
+    },
+  ];
+
+  if (relKey === "index.html") {
+    graph.push({
+      "@type": "SportsEvent",
+      "@id": `${O}/#event`,
+      name: E.name,
+      description: pageSeo.description,
+      startDate: E.startDate,
+      endDate: E.endDate,
+      eventStatus: "https://schema.org/EventScheduled",
+      eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
+      isAccessibleForFree: true,
+      url: `${O}/`,
+      image: [`${O}${pageSeo.ogImage}`],
+      location: {
+        "@type": "Place",
+        name: E.venueName,
+        address: addr,
+      },
+      organizer: { "@id": orgId },
+    });
+  } else if (pageSeo.indexable && pageSeo.breadcrumbName) {
+    graph.push({
+      "@type": "BreadcrumbList",
+      itemListElement: [
+        { "@type": "ListItem", position: 1, name: "Home", item: `${O}/` },
+        { "@type": "ListItem", position: 2, name: pageSeo.breadcrumbName, item: canonicalUrl },
+      ],
+    });
+  }
+
+  if (relKey === "Templates/ignition.html") {
+    graph.push({
+      "@type": "SportsEvent",
+      name: "IGNITION Esports — UDAAN 2026",
+      description: pageSeo.description,
+      startDate: E.startDate,
+      endDate: E.endDate,
+      eventStatus: "https://schema.org/EventScheduled",
+      eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
+      location: { "@type": "Place", name: E.venueName, address: addr },
+      organizer: { "@id": orgId },
+      superEvent: { "@id": `${O}/#event` },
+      url: canonicalUrl,
+      image: [`${O}${pageSeo.ogImage}`],
+    });
+  } else if (relKey === "Templates/gallery.html") {
+    graph.push({
+      "@type": "ImageGallery",
+      name: "UDAAN Sports Fest Gallery",
+      description: pageSeo.description,
+      url: canonicalUrl,
+      publisher: { "@id": orgId },
+    });
+  } else if (relKey === "Templates/torchbearers.html" && TORCHBEARERS_PEOPLE.length) {
+    graph.push({
+      "@type": "ItemList",
+      name: "Torchbearers — Presidents & Vice Presidents of UDAAN",
+      numberOfItems: TORCHBEARERS_PEOPLE.length,
+      itemListElement: TORCHBEARERS_PEOPLE.map((p, idx) => ({
+        "@type": "ListItem",
+        position: idx + 1,
+        item: {
+          "@type": "Person",
+          name: p.name,
+          jobTitle: `${p.role} (${p.year})`,
+          image: `${O}${p.image.startsWith("/") ? p.image : `/${p.image}`}`,
+          affiliation: { "@id": orgId },
+        },
+      })),
+    });
+  }
+
+  return JSON.stringify({ "@context": "https://schema.org", "@graph": graph });
+}
+
+function buildSeoHeadBlock(relKey) {
+  const pageSeo = PAGES_SEO[relKey];
+  if (!pageSeo) return "";
+  const O = SEO_CONFIG.CANONICAL_ORIGIN;
+  const canonicalUrl = `${O}${pageSeo.cleanPath}`;
+  const ogImgUrl = `${O}${pageSeo.ogImage}`;
+  const lines = [
+    `  <title>${escHtml(pageSeo.title)}</title>`,
+    `  <meta name="description" content="${escHtml(pageSeo.description)}" />`,
+    `  <meta name="theme-color" content="${SEO_CONFIG.THEME_COLOR}" />`,
+    !pageSeo.indexable ? `  <meta name="robots" content="noindex, nofollow" />` : "",
+    relKey === "index.html" && SEO_CONFIG.GSC_VERIFICATION_CONTENT
+      ? `  <meta name="google-site-verification" content="${escHtml(SEO_CONFIG.GSC_VERIFICATION_CONTENT)}" />`
+      : "",
+    `  <link rel="canonical" href="${canonicalUrl}" />`,
+    `  <link rel="icon" href="/favicon.ico" sizes="any" />`,
+    `  <link rel="icon" type="image/png" sizes="32x32" href="/Assets/icons/favicon-32.png" />`,
+    `  <link rel="apple-touch-icon" sizes="180x180" href="/Assets/icons/apple-touch-icon.png" />`,
+    `  <link rel="manifest" href="/site.webmanifest" />`,
+    `  <meta property="og:type" content="${pageSeo.ogType}" />`,
+    `  <meta property="og:site_name" content="${escHtml(SEO_CONFIG.SITE_NAME)}" />`,
+    `  <meta property="og:locale" content="${SEO_CONFIG.LOCALE}" />`,
+    `  <meta property="og:title" content="${escHtml(pageSeo.ogTitle)}" />`,
+    `  <meta property="og:description" content="${escHtml(pageSeo.description)}" />`,
+    `  <meta property="og:url" content="${canonicalUrl}" />`,
+    `  <meta property="og:image" content="${ogImgUrl}" />`,
+    `  <meta property="og:image:width" content="1200" />`,
+    `  <meta property="og:image:height" content="630" />`,
+    `  <meta property="og:image:alt" content="${escHtml(pageSeo.ogImageAlt)}" />`,
+    `  <meta name="twitter:card" content="summary_large_image" />`,
+    `  <meta name="twitter:title" content="${escHtml(pageSeo.ogTitle)}" />`,
+    `  <meta name="twitter:description" content="${escHtml(pageSeo.description)}" />`,
+    `  <meta name="twitter:image" content="${ogImgUrl}" />`,
+    `  <meta name="twitter:image:alt" content="${escHtml(pageSeo.ogImageAlt)}" />`,
+    `  <script type="application/ld+json">${buildJsonLd(relKey, pageSeo, canonicalUrl)}</script>`,
+  ].filter(Boolean);
+  return lines.join("\n");
+}
+
 function transformHtml(htmlPath, outHtmlPath, baseDirRel) {
   let html = fs.readFileSync(htmlPath, "utf8");
   const isHome = baseDirRel === ".";
+  const relKey = isHome ? "index.html" : `Templates/${path.basename(htmlPath)}`;
+
+  // Replace existing SEO/meta/favicon/JSON-LD tags with authoritative SEO block
+  if (PAGES_SEO[relKey]) {
+    html = html
+      .replace(/<title>[\s\S]*?<\/title>\s*/gi, "")
+      .replace(/<meta\s+[^>]*name="(?:description|theme-color|robots|google-site-verification|twitter:[^"]+)"[^>]*\/?>\s*/gi, "")
+      .replace(/<meta\s+[^>]*content="[^"]*"\s+name="(?:description|theme-color|robots|google-site-verification|twitter:[^"]+)"[^>]*\/?>\s*/gi, "")
+      .replace(/<meta\s+[^>]*property="og:[^"]+"[^>]*\/?>\s*/gi, "")
+      .replace(/<link\s+[^>]*rel="(?:canonical|shortcut icon|icon|apple-touch-icon|manifest)"[^>]*\/?>\s*/gi, "")
+      .replace(/<script\s+type="application\/ld\+json">[\s\S]*?<\/script>\s*/gi, "");
+    const seoBlock = buildSeoHeadBlock(relKey);
+    html = html.replace(/<meta\s+[^>]*name="viewport"[^>]*\/?>/i, (m) => `${m}\n${seoBlock}`);
+  }
+
+  // Normalize internal page links to clean canonical URLs
+  html = html.replace(/href="([^"]*)"/gi, (full, href) => {
+    if (/^(https?:|mailto:|tel:|#)/i.test(href)) return full;
+    if (href === "index.html" || href === "../index.html" || href === "./index.html") return 'href="/"';
+    if (href.startsWith("index.html#") || href.startsWith("../index.html#")) {
+      return `href="/#${href.split("#")[1]}"`;
+    }
+    const m = href.match(/^(?:\.\.\/|\.\/|\/)?(?:Templates\/)?([a-z0-9-]+)\.html(#.*)?$/i);
+    if (m && PAGES_SEO[`Templates/${m[1]}.html`]) {
+      return `href="/Templates/${m[1]}${m[2] || ""}"`;
+    }
+    return full;
+  });
 
   // Convert public island <script defer src=".../*.bundle.js"></script> to ESM (or IntersectionObserver lazy loader)
   html = html.replace(
@@ -364,6 +589,33 @@ for (const ent of fs.readdirSync(path.join(ROOT, "Templates"))) {
     "Templates",
   );
 }
+
+// 5b. Generate dist/sitemap.xml from indexable pages + git lastmod + key images
+console.log("[build] Generating dist/sitemap.xml...");
+const O = SEO_CONFIG.CANONICAL_ORIGIN;
+const sitemapEntries = Object.entries(PAGES_SEO)
+  .filter(([, p]) => p.indexable)
+  .map(([relFile, p]) => {
+    const loc = `${O}${p.cleanPath}`;
+    const lastmod = getGitLastMod(relFile);
+    const images = [`${O}${p.ogImage}`];
+    if (relFile === "Templates/torchbearers.html") {
+      for (const person of TORCHBEARERS_PEOPLE) {
+        images.push(`${O}${person.image.startsWith("/") ? person.image : `/${person.image}`}`);
+      }
+    } else if (relFile === "Templates/gallery.html") {
+      for (const n of ["1", "2", "3", "4", "5"]) {
+        images.push(`${O}/Assets/gallery/${n}.webp`);
+      }
+    }
+    const imgXml = images
+      .map((u) => `    <image:image><image:loc>${escHtml(u)}</image:loc></image:image>`)
+      .join("\n");
+    return `  <url>\n    <loc>${escHtml(loc)}</loc>\n    <lastmod>${lastmod}</lastmod>\n${imgXml}\n  </url>`;
+  })
+  .join("\n");
+const sitemapXml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"\n        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">\n${sitemapEntries}\n</urlset>\n`;
+fs.writeFileSync(path.join(DIST, "sitemap.xml"), sitemapXml, "utf8");
 
 // 6. Version asset URLs inside dist/Styles/*.css
 for (const cssFile of walk(path.join(DIST, "Styles"))) {
