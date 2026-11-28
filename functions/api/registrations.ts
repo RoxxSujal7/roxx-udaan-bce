@@ -72,7 +72,7 @@ const ALLOWED_YEARS = new Set<string>([
 ]);
 
 const FIXED_COLLEGE = "Bhagalpur College of Engineering";
-const ROLL_NUMBER_REGEX = /^[A-Za-z0-9/-]{3,40}$/;
+const ROLL_NUMBER_REGEX = /^\d{3,40}$/;
 const MAX_TEAM_MEMBERS = 15;
 const MAX_BODY_BYTES = 16 * 1024;
 const UUID_REGEX =
@@ -199,7 +199,7 @@ export async function onRequestPost(context: PagesContext): Promise<Response> {
       {
         ok: false,
         error:
-          "Roll / Registration number is required (3–40 chars, letters, digits, - or /).",
+          "Roll / Registration number is required (3–40 digits only).",
       },
       400,
     );
@@ -320,7 +320,7 @@ export async function onRequestPost(context: PagesContext): Promise<Response> {
         return jsonResponse(
           {
             ok: false,
-            error: `Teammate ${i + 1}: registration number must be 3–40 chars (letters, digits, - or /).`,
+            error: `Teammate ${i + 1}: registration number must be 3–40 digits only.`,
           },
           400,
         );

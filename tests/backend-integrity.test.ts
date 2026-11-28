@@ -271,7 +271,7 @@ async function testKeyCompatibilityAcrossAllRoutes(secretKey: string) {
           email: "player@bcebhagalpur.ac.in",
           phone: "9876543210",
           college: "BCE Bhagalpur",
-          rollNumber: "24CSE01",
+          rollNumber: "24101105001",
           department: "CSE",
           academicYear: "2nd Year",
           events: ["Cricket"],
@@ -945,7 +945,7 @@ async function testSupabaseUrlNormalizationAndErrorLogging() {
               phoneCountryCode: "+91",
               phone: "9876543210",
               college: "BCE Bhagalpur",
-              rollNumber: "24CSE01",
+              rollNumber: "24101105001",
               department: "CSE",
               academicYear: "2nd Year",
               events: ["Cricket"],
@@ -1138,7 +1138,9 @@ async function testRegistrationFormRules() {
   // 3. Academic fields required
   for (const patch of [
     { rollNumber: "" },
-    { rollNumber: "ab" },
+    { rollNumber: "12" },
+    { rollNumber: "24CSE01" },
+    { rollNumber: "23-101" },
     { rollNumber: "23 CSE 01" },
     { department: "" },
     { department: "BIO" },
