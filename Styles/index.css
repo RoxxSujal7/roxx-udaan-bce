@@ -147,7 +147,6 @@ section.contact {
 
 .left>img {
   width: 4.2rem;
-  height: auto;
 }
 
 .left {
@@ -174,7 +173,6 @@ section.contact {
 /* Landing Content */
 main {
   /* visibility: hidden; */
-  width: 100%;
   color: white;
   display: flex;
   flex-direction: column;
@@ -258,7 +256,6 @@ main {
 .text {
   z-index: 30;
   margin-top: -14rem;
-  width: min(981px, 100%);
 }
 
 .text>img {
