@@ -8,8 +8,22 @@ export interface TorchbearerFolder {
 }
 
 // Easy-to-edit list of UDAAN Presidents grouped by year (newest first).
-// Replace placeholder entries with real names, tenures, and photos in Assets/presidents/.
+// Replace the 2026 demo logo entry with the 2026 President's photo & name when ready.
 export const FOLDERS: TorchbearerFolder[] = [
+  {
+    year: "2026",
+    subtitle: "Presidents of UDAAN",
+    line: "Bhagalpur College of Engineering · 2026",
+    sheets: [
+      {
+        image: "/Assets/presidents/2026-demo-logo.jpg",
+        alt: "UDAAN 2026 Demo Logo",
+        code: "President",
+        title: "UDAAN 2026",
+        detail: "UDAAN 2026",
+      },
+    ],
+  },
   {
     year: "2025",
     subtitle: "Presidents of UDAAN",
@@ -20,35 +34,7 @@ export const FOLDERS: TorchbearerFolder[] = [
         alt: "Akash Deep",
         code: "President",
         title: "Akash Deep",
-        detail: "UDAAN 2025–26",
-      },
-    ],
-  },
-  {
-    year: "2024",
-    subtitle: "Presidents of UDAAN",
-    line: "Bhagalpur College of Engineering · 2024",
-    sheets: [
-      {
-        image: "/Assets/presidents/placeholder.svg",
-        alt: "Name TBD",
-        code: "President",
-        title: "Name TBD",
-        detail: "UDAAN 2024–25",
-      },
-    ],
-  },
-  {
-    year: "2023",
-    subtitle: "Presidents of UDAAN",
-    line: "Bhagalpur College of Engineering · 2023",
-    sheets: [
-      {
-        image: "/Assets/presidents/placeholder.svg",
-        alt: "Name TBD",
-        code: "President",
-        title: "Name TBD",
-        detail: "UDAAN 2023–24",
+        detail: "UDAAN 2025",
       },
     ],
   },
