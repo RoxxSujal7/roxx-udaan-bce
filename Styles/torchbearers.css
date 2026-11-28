@@ -1,0 +1,196 @@
+/* Torchbearers — Editorial sports-fest layout & typography */
+
+:root {
+  --tb-bg: #0e1014;
+  --tb-surface: #12141a;
+  --tb-border: rgba(255, 255, 255, 0.09);
+  --tb-border-active: rgba(238, 86, 34, 0.45);
+  --tb-accent: #ee5622;
+  --tb-text: #f4f4f5;
+  --tb-muted: #9ca3af;
+  --tb-font-display: "Big Shoulders Display", Impact, "Arial Narrow", sans-serif;
+  --tb-font-body: "Montserrat", system-ui, -apple-system, sans-serif;
+  --tb-size-hero: clamp(3rem, 7vw, 5.5rem);
+  --tb-size-eyebrow: 0.72rem;
+  --tb-size-sub: clamp(0.95rem, 1.25vw, 1.1rem);
+  --tb-size-year: clamp(1.75rem, 2.5vw, 2.35rem);
+}
+
+.tb-shell {
+  width: 100%;
+  min-height: 100vh;
+  background: var(--tb-bg);
+  color: var(--tb-text);
+  font-family: var(--tb-font-body);
+  padding: 4.5rem clamp(1.25rem, 4vw, 3.5rem) 3.5rem;
+  box-sizing: border-box;
+  overflow-x: hidden;
+}
+
+.tb-container {
+  max-width: 1440px;
+  margin: 0 auto;
+}
+
+/* Editorial Masthead */
+.tb-masthead {
+  margin-bottom: clamp(1.75rem, 3vw, 2.75rem);
+}
+
+.tb-meta-bar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem 1.5rem;
+  padding-bottom: 0.85rem;
+  border-bottom: 1px solid var(--tb-border);
+  font-size: var(--tb-size-eyebrow);
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--tb-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.tb-meta-accent {
+  color: var(--tb-accent);
+}
+
+.tb-title-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding-top: 1.25rem;
+}
+
+@media (min-width: 900px) {
+  .tb-title-row {
+    flex-direction: row;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 2rem;
+  }
+}
+
+.tb-h1 {
+  margin: 0;
+  font-family: var(--tb-font-display);
+  font-size: var(--tb-size-hero);
+  font-weight: 800;
+  line-height: 0.92;
+  letter-spacing: -0.02em;
+  text-transform: uppercase;
+  color: var(--tb-text);
+}
+
+.tb-subtitle {
+  margin: 0;
+  max-width: 24rem;
+  font-size: var(--tb-size-sub);
+  font-weight: 400;
+  line-height: 1.5;
+  color: var(--tb-muted);
+}
+
+/* Side-by-side folders on desktop/tablet (>= 900px), vertical stack on mobile (< 900px) */
+.tb-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+}
+
+@media (min-width: 900px) {
+  .tb-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: clamp(1rem, 2vw, 1.75rem);
+  }
+}
+
+.tb-slot {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--tb-surface);
+  border: 1px solid var(--tb-border);
+  border-radius: 16px;
+  overflow: hidden;
+  transition: border-color 0.25s ease;
+}
+
+.tb-slot[data-open="true"] {
+  border-color: var(--tb-border-active);
+}
+
+.tb-slot-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.9rem 1.25rem;
+  border-bottom: 1px solid var(--tb-border);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.tb-slot-year {
+  font-family: var(--tb-font-display);
+  font-size: var(--tb-size-year);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+  color: var(--tb-text);
+}
+
+.tb-slot-tag {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--tb-muted);
+}
+
+.tb-slot[data-open="true"] .tb-slot-tag {
+  color: var(--tb-accent);
+}
+
+.tb-folder-wrap {
+  width: 100%;
+  min-height: 500px;
+}
+
+/* Overrides into FrostedFolderLookbook without modifying the component file */
+.tb-folder {
+  font-family: var(--tb-font-body);
+}
+
+.tb-folder .ffl-title {
+  font-family: var(--tb-font-display);
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  font-variant-numeric: tabular-nums;
+}
+
+.tb-folder .ffl-head,
+.tb-folder .ffl-foot p {
+  font-family: var(--tb-font-body);
+  font-weight: 500;
+}
+
+.tb-folder .ffl-name {
+  color: #10242b;
+  font-family: var(--tb-font-body);
+  font-weight: 600;
+}
+
+.tb-folder .ffl-code,
+.tb-folder .ffl-det,
+.tb-folder .ffl-hint {
+  font-family: var(--tb-font-body);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tb-slot {
+    transition: none;
+  }
+}

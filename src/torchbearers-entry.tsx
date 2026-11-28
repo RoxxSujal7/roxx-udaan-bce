@@ -28,63 +28,61 @@ function TorchbearersApp() {
   );
 
   return (
-    <div style={{ width: "100%", background: "#111216", paddingTop: "6rem", paddingBottom: "3rem" }}>
-      <header
-        style={{
-          textAlign: "center",
-          padding: "0 1.25rem 2rem",
-          fontFamily: '"Montserrat", sans-serif',
-        }}
-      >
-        <h1
-          className="sec-header"
-          style={{
-            margin: 0,
-            color: "#ffffff",
-            fontSize: "clamp(2rem, 5vw, 3.25rem)",
-            letterSpacing: "0.14em",
-            textTransform: "uppercase",
-          }}
-        >
-          TORCHBEARERS
-        </h1>
-        <p
-          style={{
-            margin: "0.75rem auto 0",
-            maxWidth: "34rem",
-            fontSize: "1rem",
-            color: "#b4b8c5",
-            lineHeight: 1.6,
-          }}
-        >
-          Presidents of UDAAN, past &amp; present
-        </p>
-      </header>
+    <div className="tb-shell">
+      <div className="tb-container">
+        <header className="tb-masthead">
+          <div className="tb-meta-bar">
+            <span>
+              <span className="tb-meta-accent">UDAAN</span> · BCE BHAGALPUR
+            </span>
+            <span>PRESIDENTS ARCHIVE · 2025–2026</span>
+          </div>
+          <div className="tb-title-row">
+            <h1 className="tb-h1">TORCHBEARERS</h1>
+            <p className="tb-subtitle">Presidents of UDAAN, past &amp; present</p>
+          </div>
+        </header>
 
-      <div>
-        {FOLDERS.map((folder) => {
-          const gen = closeGen[folder.year] ?? 0;
-          return (
-            <div key={folder.year} style={{ minHeight: "560px" }}>
-              <FrostedFolderLookbook
-                key={`${folder.year}-${gen}`}
-                title={folder.year}
-                subtitle={folder.subtitle}
-                line={folder.line}
-                footer="Handle with pride"
-                wordmark="UDAAN"
-                sheets={folder.sheets}
-                openLabel={`Open ${folder.year}`}
-                closeLabel={`Close ${folder.year}`}
-                tint="#ff6b2b"
-                background="#111216"
-                height="85svh"
-                defaultOpen={openYear === folder.year}
-                onOpenChange={(isOpen) => handleOpenChange(folder.year, isOpen)}
-              />
-            </div>
-          );
-        })}
+        <div className="tb-grid">
+          {FOLDERS.map((folder, index) => {
+            const gen = closeGen[folder.year] ?? 0;
+            const isOpen = openYear === folder.year;
+            return (
+              <section
+                key={folder.year}
+                className="tb-slot"
+                data-open={isOpen ? "true" : "false"}
+                aria-label={`${folder.year} President Folder`}
+              >
+                <div className="tb-slot-head">
+                  <span className="tb-slot-year">{folder.year}</span>
+                  <span className="tb-slot-tag">
+                    {index === 0 ? "Current" : "Past"} · {isOpen ? "Open" : "Archive"}
+                  </span>
+                </div>
+                <div className="tb-folder-wrap">
+                  <FrostedFolderLookbook
+                    key={`${folder.year}-${gen}`}
+                    className="tb-folder"
+                    title={folder.year}
+                    subtitle={folder.subtitle}
+                    line={folder.line}
+                    footer="Handle with pride"
+                    wordmark="UDAAN"
+                    sheets={folder.sheets}
+                    openLabel={`Open ${folder.year}`}
+                    closeLabel={`Close ${folder.year}`}
+                    tint="#ee5622"
+                    background="#0e1014"
+                    height="64svh"
+                    defaultOpen={isOpen}
+                    onOpenChange={(nextOpen) => handleOpenChange(folder.year, nextOpen)}
+                  />
+                </div>
+              </section>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
