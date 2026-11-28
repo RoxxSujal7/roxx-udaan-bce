@@ -28,7 +28,7 @@ function TorchbearersApp() {
   );
 
   return (
-    <div style={{ background: "#111216", paddingTop: "6rem", paddingBottom: "3rem" }}>
+    <div style={{ width: "100%", background: "#111216", paddingTop: "6rem", paddingBottom: "3rem" }}>
       <header
         style={{
           textAlign: "center",
