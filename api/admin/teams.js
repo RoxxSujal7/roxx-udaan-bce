@@ -206,10 +206,15 @@ async function requireAdminAuth(request, env) {
 
 // lib/server/supabase-rest.ts
 function getSupabaseConfig(env) {
-  const url = env.SUPABASE_URL?.trim().replace(/\/+$/, "");
-  const secretKey = env.SUPABASE_SECRET_KEY?.trim();
+  const rawUrl = normalizeSecretEnv(env.SUPABASE_URL);
+  const url = rawUrl.replace(/\/+$/, "").replace(/\/rest\/v1$/i, "").replace(/\/+$/, "");
+  const secretKey = normalizeSecretEnv(env.SUPABASE_SECRET_KEY);
   if (!url || !secretKey) return null;
   return { url, secretKey };
+}
+async function logSupabaseError(route, response) {
+  const body = (await response.clone().text().catch(() => "")).slice(0, 300);
+  console.error("[supabase]", route, response.status, body);
 }
 function buildSupabaseAuthHeaders(secretKey, extra) {
   const headers = new Headers(extra);
@@ -332,6 +337,7 @@ async function onRequest(context) {
         body: JSON.stringify(rows)
       });
       if (!sbRes.ok) {
+        await logSupabaseError("POST /api/admin/teams", sbRes);
         return adminJsonResponse(
           { ok: false, error: "Failed to save team(s) (check for duplicate names)." },
           502
@@ -409,6 +415,7 @@ async function onRequest(context) {
         })
       });
       if (!sbRes.ok) {
+        await logSupabaseError("PATCH /api/admin/teams", sbRes);
         const errText = await sbRes.text().catch(() => "");
         if (errText.includes("TEAM_HAS_MATCHES")) {
           return adminJsonResponse(
@@ -440,6 +447,7 @@ async function onRequest(context) {
       { method: "DELETE" }
     );
     if (!sbRes.ok) {
+      await logSupabaseError("DELETE /api/admin/teams", sbRes);
       return adminJsonResponse({ ok: false, error: "Failed to delete team." }, 502);
     }
     return adminJsonResponse({ ok: true, deletedId: id }, 200);

@@ -8,6 +8,7 @@ import {
 } from "../../../lib/server/admin-auth";
 import {
   getSupabaseConfig,
+  logSupabaseError,
   supabaseFetch,
 } from "../../../lib/server/supabase-rest";
 
@@ -64,6 +65,7 @@ export async function onRequestGet(context: PagesContext): Promise<Response> {
       );
 
       if (!sbResponse.ok) {
+        await logSupabaseError("GET /api/admin/registrations", sbResponse);
         return adminJsonResponse(
           { ok: false, error: "Failed to fetch registrations from database." },
           502,

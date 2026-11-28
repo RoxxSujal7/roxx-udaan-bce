@@ -14,6 +14,7 @@ import {
 } from "../../../lib/server/ntfy";
 import {
   getSupabaseConfig,
+  logSupabaseError,
   supabaseFetch,
 } from "../../../lib/server/supabase-rest";
 
@@ -113,12 +114,14 @@ export async function onRequest(context: PagesContext): Promise<Response> {
         }),
       });
       if (sbRes.status === 409) {
+        await logSupabaseError("POST /api/admin/podiums", sbRes);
         return adminJsonResponse(
           { ok: false, error: "Duplicate podium award for this event, place, and department." },
           409,
         );
       }
       if (!sbRes.ok) {
+        await logSupabaseError("POST /api/admin/podiums", sbRes);
         return adminJsonResponse({ ok: false, error: "Failed to save podium award." }, 502);
       }
       const created = (await sbRes.json()) as unknown[];
@@ -157,6 +160,7 @@ export async function onRequest(context: PagesContext): Promise<Response> {
       { method: "DELETE" },
     );
     if (!sbRes.ok) {
+      await logSupabaseError("DELETE /api/admin/podiums", sbRes);
       return adminJsonResponse({ ok: false, error: "Failed to delete podium award." }, 502);
     }
     return adminJsonResponse({ ok: true, deletedId: id }, 200);

@@ -8,6 +8,7 @@ import {
 } from "../../../lib/server/admin-auth";
 import {
   getSupabaseConfig,
+  logSupabaseError,
   supabaseFetch,
 } from "../../../lib/server/supabase-rest";
 
@@ -134,6 +135,7 @@ export async function onRequest(context: PagesContext): Promise<Response> {
         body: JSON.stringify(rows),
       });
       if (!sbRes.ok) {
+        await logSupabaseError("POST /api/admin/teams", sbRes);
         return adminJsonResponse(
           { ok: false, error: "Failed to save team(s) (check for duplicate names)." },
           502,
@@ -219,6 +221,7 @@ export async function onRequest(context: PagesContext): Promise<Response> {
         }),
       });
       if (!sbRes.ok) {
+        await logSupabaseError("PATCH /api/admin/teams", sbRes);
         const errText = await sbRes.text().catch(() => "");
         if (errText.includes("TEAM_HAS_MATCHES")) {
           return adminJsonResponse(
@@ -252,6 +255,7 @@ export async function onRequest(context: PagesContext): Promise<Response> {
       { method: "DELETE" },
     );
     if (!sbRes.ok) {
+      await logSupabaseError("DELETE /api/admin/teams", sbRes);
       return adminJsonResponse({ ok: false, error: "Failed to delete team." }, 502);
     }
     return adminJsonResponse({ ok: true, deletedId: id }, 200);

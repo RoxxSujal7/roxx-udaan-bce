@@ -180,10 +180,15 @@ async function requireAdminAuth(request, env) {
 
 // lib/server/supabase-rest.ts
 function getSupabaseConfig(env) {
-  const url = env.SUPABASE_URL?.trim().replace(/\/+$/, "");
-  const secretKey = env.SUPABASE_SECRET_KEY?.trim();
+  const rawUrl = normalizeSecretEnv(env.SUPABASE_URL);
+  const url = rawUrl.replace(/\/+$/, "").replace(/\/rest\/v1$/i, "").replace(/\/+$/, "");
+  const secretKey = normalizeSecretEnv(env.SUPABASE_SECRET_KEY);
   if (!url || !secretKey) return null;
   return { url, secretKey };
+}
+async function logSupabaseError(route, response) {
+  const body = (await response.clone().text().catch(() => "")).slice(0, 300);
+  console.error("[supabase]", route, response.status, body);
 }
 function buildSupabaseAuthHeaders(secretKey, extra) {
   const headers = new Headers(extra);
@@ -248,6 +253,7 @@ async function onRequestGet(context) {
         `event_registrations?select=${columns}&order=created_at.desc&limit=${PAGE_SIZE}&offset=${offset}`
       );
       if (!sbResponse.ok) {
+        await logSupabaseError("GET /api/admin/registrations", sbResponse);
         return adminJsonResponse(
           { ok: false, error: "Failed to fetch registrations from database." },
           502

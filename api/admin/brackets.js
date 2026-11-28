@@ -206,10 +206,15 @@ async function requireAdminAuth(request, env) {
 
 // lib/server/supabase-rest.ts
 function getSupabaseConfig(env) {
-  const url = env.SUPABASE_URL?.trim().replace(/\/+$/, "");
-  const secretKey = env.SUPABASE_SECRET_KEY?.trim();
+  const rawUrl = normalizeSecretEnv(env.SUPABASE_URL);
+  const url = rawUrl.replace(/\/+$/, "").replace(/\/rest\/v1$/i, "").replace(/\/+$/, "");
+  const secretKey = normalizeSecretEnv(env.SUPABASE_SECRET_KEY);
   if (!url || !secretKey) return null;
   return { url, secretKey };
+}
+async function logSupabaseError(route, response) {
+  const body = (await response.clone().text().catch(() => "")).slice(0, 300);
+  console.error("[supabase]", route, response.status, body);
 }
 function buildSupabaseAuthHeaders(secretKey, extra) {
   const headers = new Headers(extra);
@@ -310,6 +315,7 @@ async function onRequest(context) {
         })
       });
       if (!sbRes.ok) {
+        await logSupabaseError("PUT /api/admin/brackets", sbRes);
         return adminJsonResponse(
           { ok: false, error: "Failed to save bracket." },
           502
@@ -331,6 +337,7 @@ async function onRequest(context) {
       { method: "DELETE" }
     );
     if (!sbRes.ok) {
+      await logSupabaseError("DELETE /api/admin/brackets", sbRes);
       return adminJsonResponse(
         { ok: false, error: "Failed to delete bracket." },
         502

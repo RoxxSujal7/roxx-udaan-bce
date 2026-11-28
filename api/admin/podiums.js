@@ -264,10 +264,15 @@ async function publishPush(env, payload) {
 
 // lib/server/supabase-rest.ts
 function getSupabaseConfig(env) {
-  const url = env.SUPABASE_URL?.trim().replace(/\/+$/, "");
-  const secretKey = env.SUPABASE_SECRET_KEY?.trim();
+  const rawUrl = normalizeSecretEnv(env.SUPABASE_URL);
+  const url = rawUrl.replace(/\/+$/, "").replace(/\/rest\/v1$/i, "").replace(/\/+$/, "");
+  const secretKey = normalizeSecretEnv(env.SUPABASE_SECRET_KEY);
   if (!url || !secretKey) return null;
   return { url, secretKey };
+}
+async function logSupabaseError(route, response) {
+  const body = (await response.clone().text().catch(() => "")).slice(0, 300);
+  console.error("[supabase]", route, response.status, body);
 }
 function buildSupabaseAuthHeaders(secretKey, extra) {
   const headers = new Headers(extra);
@@ -367,12 +372,14 @@ async function onRequest(context) {
         })
       });
       if (sbRes.status === 409) {
+        await logSupabaseError("POST /api/admin/podiums", sbRes);
         return adminJsonResponse(
           { ok: false, error: "Duplicate podium award for this event, place, and department." },
           409
         );
       }
       if (!sbRes.ok) {
+        await logSupabaseError("POST /api/admin/podiums", sbRes);
         return adminJsonResponse({ ok: false, error: "Failed to save podium award." }, 502);
       }
       const created = await sbRes.json();
@@ -404,6 +411,7 @@ async function onRequest(context) {
       { method: "DELETE" }
     );
     if (!sbRes.ok) {
+      await logSupabaseError("DELETE /api/admin/podiums", sbRes);
       return adminJsonResponse({ ok: false, error: "Failed to delete podium award." }, 502);
     }
     return adminJsonResponse({ ok: true, deletedId: id }, 200);
