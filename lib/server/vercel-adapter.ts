@@ -10,6 +10,9 @@ interface NodeReq {
   url?: string;
   method?: string;
   headers: Record<string, string | string[] | undefined>;
+  body?: unknown;
+  rawBody?: Uint8Array | string;
+  readableEnded?: boolean;
   [Symbol.asyncIterator](): AsyncIterator<Uint8Array>;
 }
 
@@ -47,8 +50,8 @@ export async function nodeReqToWebRequest(req: NodeReq): Promise<Request> {
     (Array.isArray(req.headers["x-forwarded-proto"])
       ? req.headers["x-forwarded-proto"][0]
       : req.headers["x-forwarded-proto"]) || "https";
-  const path = req.url || "/";
-  const fullUrl = path.startsWith("http") ? path : `${proto}://${host}${path}`;
+  const reqPath = req.url || "/";
+  const fullUrl = reqPath.startsWith("http") ? reqPath : `${proto}://${host}${reqPath}`;
 
   const headers = new Headers();
   for (const [k, v] of Object.entries(req.headers)) {
@@ -61,23 +64,33 @@ export async function nodeReqToWebRequest(req: NodeReq): Promise<Request> {
   }
 
   const method = (req.method || "GET").toUpperCase();
-  let body: ArrayBuffer | undefined;
+  let body: BodyInit | undefined;
   if (method !== "GET" && method !== "HEAD") {
-    const chunks: Uint8Array[] = [];
-    let total = 0;
-    for await (const chunk of req) {
-      const buf = typeof chunk === "string" ? new TextEncoder().encode(chunk) : chunk;
-      chunks.push(buf);
-      total += buf.byteLength;
-    }
-    if (total > 0) {
-      const merged = new Uint8Array(total);
-      let offset = 0;
-      for (const c of chunks) {
-        merged.set(c, offset);
-        offset += c.byteLength;
+    if (req.rawBody !== undefined) {
+      body =
+        typeof req.rawBody === "string"
+          ? req.rawBody
+          : Uint8Array.from(req.rawBody);
+    } else if (req.readableEnded && req.body !== undefined) {
+      body = typeof req.body === "string" ? req.body : JSON.stringify(req.body);
+    } else {
+      const chunks: Uint8Array[] = [];
+      let total = 0;
+      for await (const chunk of req) {
+        const buf =
+          typeof chunk === "string" ? new TextEncoder().encode(chunk) : chunk;
+        chunks.push(buf);
+        total += buf.byteLength;
       }
-      body = merged.buffer;
+      if (total > 0) {
+        const merged = new Uint8Array(total);
+        let offset = 0;
+        for (const c of chunks) {
+          merged.set(c, offset);
+          offset += c.byteLength;
+        }
+        body = merged;
+      }
     }
   }
 

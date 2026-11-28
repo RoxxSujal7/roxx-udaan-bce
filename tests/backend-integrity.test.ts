@@ -16,9 +16,9 @@ import { onRequest as teamsHandler } from "../functions/api/admin/teams";
 import { onRequest as matchesHandler } from "../functions/api/admin/matches";
 import { onRequest as podiumsHandler } from "../functions/api/admin/podiums";
 import { onRequest as bracketsHandler } from "../functions/api/admin/brackets";
-import vercelRegistrationsHandler from "../api/registrations";
-import vercelAdminRegistrationsHandler from "../api/admin/registrations";
-import vercelLoginHandler from "../api/admin/login";
+import vercelRegistrationsHandler from "../api/registrations.js";
+import vercelAdminRegistrationsHandler from "../api/admin/registrations.js";
+import vercelLoginHandler from "../api/admin/login.js";
 
 const SUPABASE_URL = "https://example.supabase.co";
 const ADMIN_PW = "test-admin-secret";
