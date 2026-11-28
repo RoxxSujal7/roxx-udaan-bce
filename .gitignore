@@ -4,5 +4,8 @@ node_modules/
 .env.*
 !.dev.vars.example
 .wrangler/
+.vercel/
 .playwright-mcp/
 _drive_import/
+.vercel
+.env*
