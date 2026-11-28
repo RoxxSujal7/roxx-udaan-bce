@@ -1,6 +1,4 @@
 import { onRequestPost } from "../functions/api/registrations";
-import { callPagesHandler } from "../lib/server/vercel-adapter";
+import { toVercelHandler } from "../lib/server/vercel-adapter";
 
-export function POST(request: Request): Promise<Response> {
-  return callPagesHandler(onRequestPost, request);
-}
+export default toVercelHandler(onRequestPost);

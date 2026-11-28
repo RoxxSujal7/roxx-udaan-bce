@@ -16,9 +16,9 @@ import { onRequest as teamsHandler } from "../functions/api/admin/teams";
 import { onRequest as matchesHandler } from "../functions/api/admin/matches";
 import { onRequest as podiumsHandler } from "../functions/api/admin/podiums";
 import { onRequest as bracketsHandler } from "../functions/api/admin/brackets";
-import { POST as vercelRegistrationsPost } from "../api/registrations";
-import { GET as vercelAdminRegistrationsGet } from "../api/admin/registrations";
-import { POST as vercelLoginPost } from "../api/admin/login";
+import vercelRegistrationsHandler from "../api/registrations";
+import vercelAdminRegistrationsHandler from "../api/admin/registrations";
+import vercelLoginHandler from "../api/admin/login";
 
 const SUPABASE_URL = "https://example.supabase.co";
 const ADMIN_PW = "test-admin-secret";
@@ -756,6 +756,46 @@ function testAssetIntegrityAndNoStoragePassword() {
   assert.equal(adminEntry.includes("localStorage"), false);
 }
 
+async function invokeNodeHandler(
+  handler: (req: any, res: any) => Promise<void>,
+  opts: {
+    url: string;
+    method: string;
+    headers?: Record<string, string>;
+    body?: string;
+  },
+): Promise<{ status: number; headers: Record<string, string | string[]>; body: string }> {
+  const chunks = opts.body ? [new TextEncoder().encode(opts.body)] : [];
+  const req = {
+    url: opts.url,
+    method: opts.method,
+    headers: { host: "udaan.vercel.app", ...(opts.headers ?? {}) },
+    async *[Symbol.asyncIterator]() {
+      for (const c of chunks) yield c;
+    },
+  };
+  const outHeaders: Record<string, string | string[]> = {};
+  let status = 200;
+  let body = "";
+  const res = {
+    set statusCode(code: number) {
+      status = code;
+    },
+    get statusCode() {
+      return status;
+    },
+    setHeader(name: string, value: string | string[]) {
+      outHeaders[name.toLowerCase()] = value;
+    },
+    end(chunk?: Uint8Array | string) {
+      if (typeof chunk === "string") body += chunk;
+      else if (chunk) body += new TextDecoder().decode(chunk);
+    },
+  };
+  await handler(req, res);
+  return { status, headers: outHeaders, body };
+}
+
 async function testVercelAdapters() {
   const prevEnv = { ...process.env };
   process.env.ADMIN_PASSWORD = ADMIN_PW;
@@ -763,31 +803,33 @@ async function testVercelAdapters() {
   process.env.SUPABASE_URL = SUPABASE_URL;
   process.env.SUPABASE_SECRET_KEY = SB_SECRET;
   try {
-    const badReg = await vercelRegistrationsPost(
-      new Request("https://udaan.vercel.app/api/registrations", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: "{}",
-      }),
-    );
+    const badReg = await invokeNodeHandler(vercelRegistrationsHandler, {
+      url: "/api/registrations",
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: "{}",
+    });
     assert.equal(badReg.status, 400);
 
-    const unauthAdmin = await vercelAdminRegistrationsGet(
-      new Request("https://udaan.vercel.app/api/admin/registrations"),
-    );
+    const unauthAdmin = await invokeNodeHandler(vercelAdminRegistrationsHandler, {
+      url: "/api/admin/registrations",
+      method: "GET",
+    });
     assert.equal(unauthAdmin.status, 401);
 
-    const loginRes = await vercelLoginPost(
-      new Request("https://udaan.vercel.app/api/admin/login", {
-        method: "POST",
-        headers: {
-          Origin: "https://udaan.vercel.app",
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ password: ADMIN_PW }),
-      }),
-    );
+    const loginRes = await invokeNodeHandler(vercelLoginHandler, {
+      url: "/api/admin/login",
+      method: "POST",
+      headers: {
+        origin: "https://udaan.vercel.app",
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({ password: ADMIN_PW }),
+    });
     assert.equal(loginRes.status, 200);
+    const setCookie = loginRes.headers["set-cookie"];
+    const cookieStr = Array.isArray(setCookie) ? setCookie.join("; ") : String(setCookie || "");
+    assert.ok(cookieStr.includes("HttpOnly"));
   } finally {
     process.env = prevEnv;
   }

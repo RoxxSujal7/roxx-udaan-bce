@@ -1,5 +1,4 @@
 import { onRequest } from "../../functions/api/admin/logout";
+import { toVercelHandler } from "../../lib/server/vercel-adapter";
 
-export function POST(request: Request): Promise<Response> {
-  return onRequest({ request });
-}
+export default toVercelHandler(onRequest);
