@@ -44,13 +44,17 @@ function saveMuted(val: boolean) {
   }
 }
 
+const SAFE_RELATIVE_LINK_REGEX = /^(\/(?!\/)|\.\/|\.\.\/)[A-Za-z0-9_./#?=&-]*$/;
+
 function resolveLink(link: string): string {
+  const trimmed = link.trim();
+  if (!SAFE_RELATIVE_LINK_REGEX.test(trimmed)) return "#";
   const inTemplates =
     typeof window !== "undefined" &&
     window.location.pathname.includes("/Templates/");
-  if (link.startsWith("/")) return link;
-  if (link.startsWith("./") && inTemplates) return `.${link}`;
-  return link;
+  if (trimmed.startsWith("/")) return trimmed;
+  if (trimmed.startsWith("./") && inTemplates) return `.${trimmed}`;
+  return trimmed;
 }
 
 export function LiveAlerts() {

@@ -204,16 +204,34 @@ export async function onRequest(context: PagesContext): Promise<Response> {
     }
 
     try {
-      const sbRes = await supabaseFetch(
-        cfg,
-        `teams?id=eq.${encodeURIComponent(id)}`,
-        {
-          method: "PATCH",
-          headers: { Prefer: "return=representation" },
-          body: JSON.stringify(patch),
-        },
-      );
+      const sbRes = await supabaseFetch(cfg, "rpc/update_team_and_sync", {
+        method: "POST",
+        body: JSON.stringify({
+          p_team_id: id,
+          p_event: "event" in patch ? patch.event : null,
+          p_name: "name" in patch ? patch.name : null,
+          p_department: "department" in patch ? patch.department : null,
+          p_group_label:
+            "group_label" in patch && patch.group_label !== null
+              ? patch.group_label
+              : null,
+          p_clear_group: "group_label" in patch && patch.group_label === null,
+        }),
+      });
       if (!sbRes.ok) {
+        const errText = await sbRes.text().catch(() => "");
+        if (errText.includes("TEAM_HAS_MATCHES")) {
+          return adminJsonResponse(
+            {
+              ok: false,
+              error: "Cannot change event for a team that has linked matches.",
+            },
+            409,
+          );
+        }
+        if (errText.includes("TEAM_NOT_FOUND")) {
+          return adminJsonResponse({ ok: false, error: "Team not found." }, 404);
+        }
         return adminJsonResponse({ ok: false, error: "Failed to update team." }, 502);
       }
       const updated = (await sbRes.json()) as unknown[];

@@ -1,6 +1,8 @@
 // Cloudflare Pages Function: POST /api/registrations
 // Validates UDAAN 2026 event registration submissions and persists them to Supabase PostgreSQL.
 
+import { buildSupabaseAuthHeaders } from "../../lib/server/supabase-rest";
+
 export interface Env {
   SUPABASE_URL?: string;
   SUPABASE_SECRET_KEY?: string;
@@ -329,12 +331,10 @@ export async function onRequestPost(context: PagesContext): Promise<Response> {
     `${supabaseUrl}/rest/v1/event_registrations`,
     {
       method: "POST",
-      headers: {
+      headers: buildSupabaseAuthHeaders(supabaseSecretKey, {
         "Content-Type": "application/json",
-        apikey: supabaseSecretKey,
-        Authorization: `Bearer ${supabaseSecretKey}`,
         Prefer: "return=representation",
-      },
+      }),
       body: JSON.stringify(record),
     },
   );
@@ -344,10 +344,7 @@ export async function onRequestPost(context: PagesContext): Promise<Response> {
     const lookup = await fetch(
       `${supabaseUrl}/rest/v1/event_registrations?submission_id=eq.${encodeURIComponent(submissionId)}&select=id,created_at`,
       {
-        headers: {
-          apikey: supabaseSecretKey,
-          Authorization: `Bearer ${supabaseSecretKey}`,
-        },
+        headers: buildSupabaseAuthHeaders(supabaseSecretKey),
       },
     );
     if (lookup.ok) {

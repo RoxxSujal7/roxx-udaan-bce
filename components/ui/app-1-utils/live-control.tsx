@@ -56,10 +56,6 @@ import type {
   Team,
 } from "@/src/live/types";
 
-interface LiveControlProps {
-  adminPassword: string;
-}
-
 const EVENT_OPTIONS = [...ALL_ALLOWED_EVENTS, "Other"] as const;
 const VALID_EVENT_SET = new Set<string>(EVENT_OPTIONS);
 const VALID_DEPTS: Department[] = ["CSE", "ECE", "EE", "ME", "CE", "Other"];
@@ -110,7 +106,7 @@ function istToUtcIso(dateStr: string, timeStr: string): string {
   return new Date(`${dateStr}T${safeTime}:00+05:30`).toISOString();
 }
 
-export function LiveControl({ adminPassword }: LiveControlProps) {
+export function LiveControl() {
   const {
     matches,
     announcements,
@@ -208,10 +204,9 @@ export function LiveControl({ adminPassword }: LiveControlProps) {
     try {
       const res = await fetch(url, {
         method,
-        headers: {
-          Authorization: `Bearer ${adminPassword}`,
-          ...(body !== undefined ? { "Content-Type": "application/json" } : {}),
-        },
+        credentials: "same-origin",
+        headers:
+          body !== undefined ? { "Content-Type": "application/json" } : undefined,
         body: body !== undefined ? JSON.stringify(body) : undefined,
       });
       const json = (await res.json()) as { ok?: boolean; error?: string } & T;
@@ -833,7 +828,6 @@ export function LiveControl({ adminPassword }: LiveControlProps) {
       {/* ── Teams management tab ── */}
       {activeSubTab === "teams" && (
         <TeamsManagerCard
-          adminPassword={adminPassword}
           teams={teams}
           teamEvent={teamEvent}
           setTeamEvent={setTeamEvent}
@@ -1595,7 +1589,6 @@ function TeamsManagerCard({
   apiCall,
   refetch,
 }: {
-  adminPassword: string;
   teams: Team[];
   teamEvent: string;
   setTeamEvent: (ev: string) => void;

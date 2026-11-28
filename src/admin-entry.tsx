@@ -17,46 +17,21 @@ import {
 import { Input } from "@/components/ui/input";
 import type { Registration } from "@/components/ui/app-1-utils/app-1-data";
 
-const SESSION_KEY = "udaan_admin_pw";
 const API_URL = "/api/admin/registrations";
+const LOGIN_URL = "/api/admin/login";
+const LOGOUT_URL = "/api/admin/logout";
 const REFRESH_INTERVAL_MS = 60_000;
 
-// ─── Storage helpers (safe try/catch) ──────────────────────────────────────
-
-function storedPassword(): string | null {
-  try {
-    return sessionStorage.getItem(SESSION_KEY);
-  } catch {
-    return null;
-  }
-}
-
-function savePassword(pw: string) {
-  try {
-    sessionStorage.setItem(SESSION_KEY, pw);
-  } catch {
-    /* ignore */
-  }
-}
-
-function clearPassword() {
-  try {
-    sessionStorage.removeItem(SESSION_KEY);
-  } catch {
-    /* ignore */
-  }
-}
-
-// ─── API call ──────────────────────────────────────────────────────────────
+// ─── API calls (HttpOnly cookie session — never stored in Web Storage) ─────
 
 type FetchResult =
   | { ok: true; registrations: Registration[]; fetchedAt: string }
   | { ok: false; status: number; error: string };
 
-async function fetchRegistrations(password: string): Promise<FetchResult> {
+async function fetchRegistrations(): Promise<FetchResult> {
   try {
     const res = await fetch(API_URL, {
-      headers: { Authorization: `Bearer ${password}` },
+      credentials: "same-origin",
       cache: "no-store",
     });
     const json = (await res.json()) as {
@@ -82,12 +57,35 @@ async function fetchRegistrations(password: string): Promise<FetchResult> {
   }
 }
 
+async function loginWithPassword(
+  password: string,
+): Promise<{ ok: true } | { ok: false; status: number; error: string }> {
+  try {
+    const res = await fetch(LOGIN_URL, {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password }),
+      cache: "no-store",
+    });
+    const json = (await res.json()) as { ok?: boolean; error?: string };
+    if (res.ok && json.ok) return { ok: true };
+    return {
+      ok: false,
+      status: res.status,
+      error: json.error ?? "Login failed.",
+    };
+  } catch {
+    return { ok: false, status: 0, error: "Network error. Check connection." };
+  }
+}
+
 // ─── Login Screen ──────────────────────────────────────────────────────────
 
 function LoginScreen({
   onLogin,
 }: {
-  onLogin: (pw: string, data: Registration[], fetchedAt: string) => void;
+  onLogin: (data: Registration[], fetchedAt: string) => void;
 }) {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -98,13 +96,26 @@ function LoginScreen({
     if (!password.trim()) return;
     setLoading(true);
     setError("");
-    const result = await fetchRegistrations(password.trim());
+    const loginRes = await loginWithPassword(password.trim());
+    if (!loginRes.ok) {
+      setLoading(false);
+      if (loginRes.status === 401) {
+        setError("Wrong password. Please try again.");
+      } else if (loginRes.status === 503) {
+        setError("Admin access is not configured on the server.");
+      } else {
+        setError(loginRes.error || "Login failed. Please try again.");
+      }
+      return;
+    }
+
+    const result = await fetchRegistrations();
     setLoading(false);
     if (result.ok) {
-      savePassword(password.trim());
-      onLogin(password.trim(), result.registrations, result.fetchedAt);
+      setPassword("");
+      onLogin(result.registrations, result.fetchedAt);
     } else if (result.status === 401) {
-      setError("Wrong password. Please try again.");
+      setError("Session could not be established. Please try again.");
     } else if (result.status === 503) {
       setError("Admin access is not configured on the server.");
     } else {
@@ -155,98 +166,90 @@ function LoginScreen({
 // ─── App Shell ─────────────────────────────────────────────────────────────
 
 function AdminApp() {
-  const [password, setPassword] = useState<string | null>(null);
+  const [authenticated, setAuthenticated] = useState(false);
   const [registrations, setRegistrations] = useState<Registration[]>([]);
   const [fetchedAt, setFetchedAt] = useState("");
   const [refreshing, setRefreshing] = useState(false);
   const [silentCheckDone, setSilentCheckDone] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Try stored password on load
+  // Check existing HttpOnly session cookie on load
   useEffect(() => {
-    const stored = storedPassword();
-    if (!stored) {
-      setSilentCheckDone(true);
-      return;
-    }
-    fetchRegistrations(stored).then((result) => {
+    fetchRegistrations().then((result) => {
       if (result.ok) {
-        setPassword(stored);
+        setAuthenticated(true);
         setRegistrations(result.registrations);
         setFetchedAt(result.fetchedAt);
-      } else {
-        clearPassword();
       }
       setSilentCheckDone(true);
     });
   }, []);
 
   // Auto-refresh every 60 s while tab is visible
-  const startAutoRefresh = useCallback(
-    (pw: string) => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-      intervalRef.current = setInterval(async () => {
-        if (document.hidden) return;
-        const result = await fetchRegistrations(pw);
-        if (result.ok) {
-          setRegistrations(result.registrations);
-          setFetchedAt(result.fetchedAt);
-        } else if (result.status === 401) {
-          clearPassword();
-          setPassword(null);
-          if (intervalRef.current) clearInterval(intervalRef.current);
-          toast.error("Session expired. Please sign in again.");
-        }
-      }, REFRESH_INTERVAL_MS);
-    },
-    [],
-  );
+  const startAutoRefresh = useCallback(() => {
+    if (intervalRef.current) clearInterval(intervalRef.current);
+    intervalRef.current = setInterval(async () => {
+      if (document.hidden) return;
+      const result = await fetchRegistrations();
+      if (result.ok) {
+        setRegistrations(result.registrations);
+        setFetchedAt(result.fetchedAt);
+      } else if (result.status === 401) {
+        setAuthenticated(false);
+        if (intervalRef.current) clearInterval(intervalRef.current);
+        toast.error("Session expired. Please sign in again.");
+      }
+    }, REFRESH_INTERVAL_MS);
+  }, []);
 
   useEffect(() => {
-    if (password) startAutoRefresh(password);
+    if (authenticated) startAutoRefresh();
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [password, startAutoRefresh]);
+  }, [authenticated, startAutoRefresh]);
 
   async function handleRefresh() {
-    if (!password || refreshing) return;
+    if (!authenticated || refreshing) return;
     setRefreshing(true);
-    const result = await fetchRegistrations(password);
+    const result = await fetchRegistrations();
     setRefreshing(false);
     if (result.ok) {
       setRegistrations(result.registrations);
       setFetchedAt(result.fetchedAt);
       toast.success("Refreshed.");
     } else if (result.status === 401) {
-      clearPassword();
-      setPassword(null);
+      setAuthenticated(false);
       toast.error("Session expired. Please sign in again.");
     } else {
       toast.error(result.error || "Refresh failed.");
     }
   }
 
-  function handleLogout() {
-    clearPassword();
-    setPassword(null);
+  async function handleLogout() {
+    try {
+      await fetch(LOGOUT_URL, {
+        method: "POST",
+        credentials: "same-origin",
+        cache: "no-store",
+      });
+    } catch {
+      /* ignore */
+    }
+    setAuthenticated(false);
     if (intervalRef.current) clearInterval(intervalRef.current);
     setRegistrations([]);
     setFetchedAt("");
   }
 
-  function handleLogin(
-    pw: string,
-    data: Registration[],
-    fetchedAtStr: string,
-  ) {
-    setPassword(pw);
+  function handleLogin(data: Registration[], fetchedAtStr: string) {
+    setAuthenticated(true);
     setRegistrations(data);
     setFetchedAt(fetchedAtStr);
-    startAutoRefresh(pw);
+    startAutoRefresh();
   }
 
-  // Show nothing while silently checking stored credentials
+  // Show nothing while silently checking existing session cookie
   if (!silentCheckDone) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
@@ -257,10 +260,9 @@ function AdminApp() {
 
   return (
     <>
-      {password ? (
+      {authenticated ? (
         <div className="h-screen w-full overflow-auto">
           <App1
-            adminPassword={password}
             registrations={registrations}
             fetchedAt={fetchedAt}
             onRefresh={handleRefresh}

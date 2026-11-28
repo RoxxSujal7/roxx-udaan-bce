@@ -34,6 +34,20 @@ const VALID_STATUSES = new Set<string>([
 ]);
 const VALID_ROUNDS = new Set<string>(["league", "QF", "SF", "3P", "F"]);
 const PUSH_ROUNDS = new Set<string>(["SF", "3P", "F"]);
+const FINISHED_LOCKED_FIELDS = [
+  "status",
+  "points_a",
+  "points_b",
+  "score_a",
+  "score_b",
+  "result",
+  "team_a_id",
+  "team_b_id",
+  "team_a",
+  "team_b",
+  "event",
+  "round",
+] as const;
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -598,12 +612,36 @@ export async function onRequest(context: PagesContext): Promise<Response> {
         cfg,
         `matches?id=eq.${encodeURIComponent(id)}&select=id,status,round,event,team_a,team_b,team_a_id,team_b_id,venue,result`,
       );
-      const prevRows = prevRes.ok
-        ? ((await prevRes.json()) as Array<Record<string, unknown>>)
-        : [];
-      const prevRow = prevRows[0] ?? null;
+      if (!prevRes.ok) {
+        return adminJsonResponse(
+          { ok: false, error: "Failed to load match." },
+          502,
+        );
+      }
+      const prevRows = (await prevRes.json()) as Array<Record<string, unknown>>;
+      if (!prevRows.length) {
+        return adminJsonResponse(
+          { ok: false, error: "Match not found." },
+          404,
+        );
+      }
+      const prevRow = prevRows[0];
       const prevStatus =
-        prevRow && typeof prevRow.status === "string" ? prevRow.status : null;
+        typeof prevRow.status === "string" ? prevRow.status : null;
+
+      const hasLockedField = FINISHED_LOCKED_FIELDS.some(
+        (field) => field in res.data,
+      );
+      if (prevStatus === "finished" && hasLockedField) {
+        return adminJsonResponse(
+          {
+            ok: false,
+            error:
+              "Finished matches cannot be modified via PATCH. Use POST ?id=...&action=finish to update the final result.",
+          },
+          409,
+        );
+      }
 
       const effectiveTeamAId =
         "team_a_id" in res.data
@@ -640,15 +678,14 @@ export async function onRequest(context: PagesContext): Promise<Response> {
         }
       }
 
-      const sbRes = await supabaseFetch(
-        cfg,
-        `matches?id=eq.${encodeURIComponent(id)}`,
-        {
-          method: "PATCH",
-          headers: { Prefer: "return=representation" },
-          body: JSON.stringify(res.data),
-        },
-      );
+      const patchFilter = hasLockedField
+        ? `matches?id=eq.${encodeURIComponent(id)}&status=neq.finished`
+        : `matches?id=eq.${encodeURIComponent(id)}`;
+      const sbRes = await supabaseFetch(cfg, patchFilter, {
+        method: "PATCH",
+        headers: { Prefer: "return=representation" },
+        body: JSON.stringify(res.data),
+      });
       if (!sbRes.ok) {
         return adminJsonResponse(
           { ok: false, error: "Failed to update match in database." },
@@ -657,6 +694,16 @@ export async function onRequest(context: PagesContext): Promise<Response> {
       }
       const updated = (await sbRes.json()) as Array<Record<string, unknown>>;
       if (!updated.length) {
+        if (hasLockedField) {
+          return adminJsonResponse(
+            {
+              ok: false,
+              error:
+                "Finished matches cannot be modified via PATCH. Use POST ?id=...&action=finish to update the final result.",
+            },
+            409,
+          );
+        }
         return adminJsonResponse(
           { ok: false, error: "Match not found." },
           404,

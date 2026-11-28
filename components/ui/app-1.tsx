@@ -57,7 +57,6 @@ import { getEventGroup } from "@/lib/events";
 // ─── Props ─────────────────────────────────────────────────────────────────
 
 interface App1Props {
-  adminPassword: string;
   registrations: Registration[];
   fetchedAt: string;
   onRefresh: () => void;
@@ -101,7 +100,6 @@ function csvEscape(value: unknown): string {
 // ─── Main Component ────────────────────────────────────────────────────────
 
 export function App1({
-  adminPassword,
   registrations,
   fetchedAt,
   onRefresh,
@@ -746,7 +744,7 @@ export function App1({
           </Card>
 
           {/* ── Live Control (Matches + Announcements) ── */}
-          <LiveControl adminPassword={adminPassword} />
+          <LiveControl />
         </main>
       </SidebarInset>
 

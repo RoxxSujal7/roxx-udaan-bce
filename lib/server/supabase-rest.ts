@@ -14,14 +14,30 @@ export function getSupabaseConfig(env: AdminEnv): SupabaseConfig | null {
   return { url, secretKey };
 }
 
+/**
+ * Builds Supabase REST auth headers for both modern `sb_secret_` keys
+ * (apikey-only, never sent as Bearer JWT) and legacy JWT `service_role` keys.
+ */
+export function buildSupabaseAuthHeaders(
+  secretKey: string,
+  extra?: HeadersInit,
+): Headers {
+  const headers = new Headers(extra);
+  headers.set("apikey", secretKey);
+  if (secretKey.startsWith("sb_secret_")) {
+    headers.delete("Authorization");
+  } else {
+    headers.set("Authorization", `Bearer ${secretKey}`);
+  }
+  return headers;
+}
+
 export async function supabaseFetch(
   cfg: SupabaseConfig,
   pathAndQuery: string,
   init: RequestInit = {},
 ): Promise<Response> {
-  const headers = new Headers(init.headers);
-  headers.set("apikey", cfg.secretKey);
-  headers.set("Authorization", `Bearer ${cfg.secretKey}`);
+  const headers = buildSupabaseAuthHeaders(cfg.secretKey, init.headers);
   if (init.body && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }

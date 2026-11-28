@@ -24,7 +24,7 @@ interface PagesContext {
 
 const VALID_LEVELS = new Set<string>(["info", "important", "urgent"]);
 const VALID_EXPIRY_MINUTES = new Set<number>([15, 30, 60, 120]);
-const RELATIVE_LINK_REGEX = /^(\/|\.\/|\.\.\/)[A-Za-z0-9_./#?=&-]*$/;
+const RELATIVE_LINK_REGEX = /^(\/(?!\/)|\.\/|\.\.\/)[A-Za-z0-9_./#?=&-]*$/;
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 

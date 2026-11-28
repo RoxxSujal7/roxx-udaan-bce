@@ -9,7 +9,7 @@ if (rootElement) {
   createRoot(rootElement).render(
     <StrictMode>
       <OnboardingForm />
-      <Toaster richColors position="top-center" />
+      <Toaster theme="dark" richColors position="top-center" />
     </StrictMode>,
   );
 }
