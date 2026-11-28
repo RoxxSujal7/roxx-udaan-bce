@@ -945,6 +945,9 @@ async function testSupabaseUrlNormalizationAndErrorLogging() {
               phoneCountryCode: "+91",
               phone: "9876543210",
               college: "BCE Bhagalpur",
+              rollNumber: "24CSE01",
+              department: "CSE",
+              academicYear: "2nd Year",
               events: ["Cricket"],
               participationType: "individual",
               confirmedDetails: true,
@@ -1082,11 +1085,183 @@ async function testLoginRateLimitingAndFailOpen() {
   }
 }
 
+async function testRegistrationFormRules() {
+  const env = {
+    SUPABASE_URL,
+    SUPABASE_SECRET_KEY: SB_SECRET,
+  };
+
+  const makeReq = (body: Record<string, unknown>) =>
+    new Request("https://udaan.test/api/registrations", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        submissionId: "55555555-5555-4555-8555-555555555555",
+        fullName: "Aarav Kumar",
+        email: "aarav@example.com",
+        phoneCountryCode: "+1",
+        phone: "09876543210",
+        college: "Other College",
+        rollNumber: "23101105001",
+        department: "CSE",
+        academicYear: "2nd Year",
+        events: ["Cricket"],
+        participationType: "individual",
+        confirmedDetails: true,
+        ...body,
+      }),
+    });
+
+  // 1. Phone forced to +91 & college forced to "Bhagalpur College of Engineering"
+  let capturedRecord: Record<string, unknown> | null = null;
+  const okRes = await withMockFetch(
+    async (req) => {
+      capturedRecord = JSON.parse(req.body || "{}") as Record<string, unknown>;
+      return new Response(
+        JSON.stringify([{ id: "reg-ind-1", created_at: "2026-11-28T00:00:00Z" }]),
+        { status: 201 },
+      );
+    },
+    () => registrationsPost({ request: makeReq({}), env }),
+  );
+  assert.equal(okRes.status, 201);
+  assert.equal(capturedRecord?.phone, "+919876543210");
+  assert.equal(capturedRecord?.college, "Bhagalpur College of Engineering");
+
+  // 2. Non-Indian phone rejected even if phoneCountryCode is +1
+  const badPhone = await registrationsPost({
+    request: makeReq({ phoneCountryCode: "+1", phone: "5551234567" }),
+    env,
+  });
+  assert.equal(badPhone.status, 400);
+
+  // 3. Academic fields required
+  for (const patch of [
+    { rollNumber: "" },
+    { rollNumber: "ab" },
+    { rollNumber: "23 CSE 01" },
+    { department: "" },
+    { department: "BIO" },
+    { academicYear: "" },
+    { academicYear: "5th Year" },
+  ]) {
+    const r = await registrationsPost({ request: makeReq(patch), env });
+    assert.equal(r.status, 400, `Expected 400 for ${JSON.stringify(patch)}`);
+  }
+
+  // 4. Checkbox requirements
+  const noConfirm = await registrationsPost({
+    request: makeReq({ confirmedDetails: false }),
+    env,
+  });
+  assert.equal(noConfirm.status, 400);
+
+  const validTeamBase = {
+    events: ["BGMI"],
+    participationType: "team",
+    teamName: "Squad Alpha",
+    teamMemberDetails: [
+      {
+        name: "Rohan Singh",
+        rollNumber: "23101105002",
+        department: "ECE",
+        academicYear: "2nd Year",
+      },
+    ],
+    teamConfirmed: true,
+  };
+
+  const noTeamConfirm = await registrationsPost({
+    request: makeReq({ ...validTeamBase, teamConfirmed: false }),
+    env,
+  });
+  assert.equal(noTeamConfirm.status, 400);
+
+  // 5. Team member validation (empty, >15, missing branch, duplicate reg no, matches participant roll)
+  const tooMany = Array.from({ length: 16 }, (_, i) => ({
+    name: `Player ${i + 1}`,
+    rollNumber: `23101105${String(i + 10).padStart(3, "0")}`,
+    department: "CSE",
+    academicYear: "2nd Year",
+  }));
+  for (const patch of [
+    { ...validTeamBase, teamMemberDetails: [] },
+    { ...validTeamBase, teamMemberDetails: tooMany },
+    {
+      ...validTeamBase,
+      teamMemberDetails: [
+        { name: "Rohan", rollNumber: "23101105002", department: "", academicYear: "2nd Year" },
+      ],
+    },
+    {
+      ...validTeamBase,
+      teamMemberDetails: [
+        { name: "Rohan", rollNumber: "23101105002", department: "CSE", academicYear: "Bad" },
+      ],
+    },
+    {
+      ...validTeamBase,
+      teamMemberDetails: [
+        { name: "Rohan", rollNumber: "23101105001", department: "CSE", academicYear: "2nd Year" },
+      ],
+    },
+    {
+      ...validTeamBase,
+      teamMemberDetails: [
+        { name: "Rohan", rollNumber: "23101105002", department: "CSE", academicYear: "2nd Year" },
+        { name: "Mohan", rollNumber: "23101105002", department: "ECE", academicYear: "2nd Year" },
+      ],
+    },
+  ]) {
+    const r = await registrationsPost({ request: makeReq(patch), env });
+    assert.equal(r.status, 400, `Expected 400 for team patch`);
+  }
+
+  // 6. Valid team stores formatted "Name — RegNo — Branch — Year" lines
+  let capturedTeam: Record<string, unknown> | null = null;
+  const okTeamRes = await withMockFetch(
+    async (req) => {
+      capturedTeam = JSON.parse(req.body || "{}") as Record<string, unknown>;
+      return new Response(
+        JSON.stringify([{ id: "reg-team-1", created_at: "2026-11-28T00:00:00Z" }]),
+        { status: 201 },
+      );
+    },
+    () =>
+      registrationsPost({
+        request: makeReq({
+          ...validTeamBase,
+          teamMemberDetails: [
+            {
+              name: "Rohan Singh",
+              rollNumber: "23101105002",
+              department: "ECE",
+              academicYear: "2nd Year",
+            },
+            {
+              name: "Priya Verma",
+              rollNumber: "23101105003",
+              department: "CSE",
+              academicYear: "3rd Year",
+            },
+          ],
+        }),
+        env,
+      }),
+  );
+  assert.equal(okTeamRes.status, 201);
+  assert.equal(
+    capturedTeam?.team_members,
+    "Rohan Singh — 23101105002 — ECE — 2nd Year\nPriya Verma — 23101105003 — CSE — 3rd Year",
+  );
+}
+
 async function main() {
   await testAuthHeaderHelper();
   await testSecretNormalizationAnd503Logging();
   await testSupabaseUrlNormalizationAndErrorLogging();
   await testLoginRateLimitingAndFailOpen();
+  await testRegistrationFormRules();
   await testLoginLogoutSessionAndCsrf();
   await testKeyCompatibilityAcrossAllRoutes(SB_SECRET);
   await testKeyCompatibilityAcrossAllRoutes(LEGACY_JWT);

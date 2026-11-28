@@ -774,7 +774,7 @@ export function App1({
                   ["Events", (Array.isArray(selectedRow.events) ? selectedRow.events : []).join(", ") || "—"],
                   ["Type", selectedRow.participation_type],
                   ["Team name", selectedRow.team_name ?? "—"],
-                  ["Team members", selectedRow.team_members ?? "—"],
+                  ["Team members", selectedRow.team_members ? <span className="whitespace-pre-line">{selectedRow.team_members}</span> : "—"],
                   ["Notes", selectedRow.notes ?? "—"],
                   ["Status", selectedRow.status],
                   ["Submitted at", formatIST(selectedRow.created_at)],

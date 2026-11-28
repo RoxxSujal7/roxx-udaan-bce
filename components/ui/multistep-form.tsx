@@ -9,6 +9,8 @@ import {
   Loader2,
   CheckCircle2,
   AlertCircle,
+  Plus,
+  Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -70,6 +72,13 @@ const steps = [
   { id: "review", title: "Review" },
 ];
 
+export interface TeamMemberDetail {
+  name: string;
+  rollNumber: string;
+  department: string;
+  academicYear: string;
+}
+
 export interface RegistrationFormData {
   fullName: string;
   email: string;
@@ -82,10 +91,34 @@ export interface RegistrationFormData {
   events: string[];
   participationType: "individual" | "team";
   teamName: string;
-  teamMembers: string;
+  teamMemberDetails: TeamMemberDetail[];
   notes: string;
   confirmedDetails: boolean;
+  teamConfirmed: boolean;
   website: string; // Honeypot field (must remain empty)
+}
+
+const FIXED_COLLEGE = "Bhagalpur College of Engineering";
+const ROLL_NUMBER_REGEX = /^[A-Za-z0-9/-]{3,40}$/;
+const MAX_TEAM_MEMBERS = 15;
+const DEPARTMENT_OPTIONS = [
+  { value: "CSE", label: "Computer Science & Engineering" },
+  { value: "ECE", label: "Electronics & Communication Engineering" },
+  { value: "EE", label: "Electrical Engineering" },
+  { value: "ME", label: "Mechanical Engineering" },
+  { value: "CE", label: "Civil Engineering" },
+  { value: "Other", label: "Other" },
+] as const;
+const YEAR_OPTIONS = [
+  "1st Year",
+  "2nd Year",
+  "3rd Year",
+  "4th Year",
+  "PG / Other",
+] as const;
+
+function createEmptyTeammate(): TeamMemberDetail {
+  return { name: "", rollNumber: "", department: "", academicYear: "" };
 }
 
 const fadeInUp = {
@@ -101,22 +134,24 @@ const contentVariants = {
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
-function isValidPhoneInput(countryCode: string, rawPhone: string): boolean {
-  const code = countryCode.trim() || "+91";
-  if (!/^\+[1-9]\d{0,3}$/.test(code)) {
-    return false;
-  }
+function isValidIndianPhone(rawPhone: string): boolean {
   let digits = rawPhone.replace(/\D/g, "");
-  if (code === "+91") {
-    if (digits.length === 11 && digits.startsWith("0")) {
-      digits = digits.slice(1);
-    } else if (digits.length === 12 && digits.startsWith("91")) {
-      digits = digits.slice(2);
-    }
-    return /^[6-9]\d{9}$/.test(digits);
+  if (digits.length === 11 && digits.startsWith("0")) {
+    digits = digits.slice(1);
+  } else if (digits.length === 12 && digits.startsWith("91")) {
+    digits = digits.slice(2);
   }
-  const e164 = `${code}${digits}`;
-  return digits.length >= 6 && digits.length <= 14 && /^\+[1-9]\d{7,14}$/.test(e164);
+  return /^[6-9]\d{9}$/.test(digits);
+}
+
+function normalizePhoneDisplay(rawPhone: string): string {
+  let digits = rawPhone.replace(/\D/g, "");
+  if (digits.length === 11 && digits.startsWith("0")) {
+    digits = digits.slice(1);
+  } else if (digits.length === 12 && digits.startsWith("91")) {
+    digits = digits.slice(2);
+  }
+  return digits;
 }
 
 function generateSubmissionId(): string {
@@ -161,15 +196,16 @@ const initialFormData: RegistrationFormData = {
   email: "",
   phoneCountryCode: "+91",
   phone: "",
-  college: "",
+  college: FIXED_COLLEGE,
   rollNumber: "",
   department: "",
   academicYear: "",
   ...getInitialQuerySelection(),
   teamName: "",
-  teamMembers: "",
+  teamMemberDetails: [createEmptyTeammate()],
   notes: "",
   confirmedDetails: false,
+  teamConfirmed: false,
   website: "",
 };
 
@@ -194,6 +230,47 @@ const OnboardingForm = () => {
   const hasTeamRequiredSelection = formData.events.some((ev) =>
     TEAM_REQUIRED_EVENTS.has(ev),
   );
+  const isTeamEntry =
+    hasTeamApplicableSelection && formData.participationType === "team";
+
+  const updateTeammate = (
+    index: number,
+    field: keyof TeamMemberDetail,
+    value: string,
+  ) => {
+    setSubmitError(null);
+    setStepError(null);
+    setFormData((prev) => ({
+      ...prev,
+      teamMemberDetails: prev.teamMemberDetails.map((member, i) =>
+        i === index ? { ...member, [field]: value } : member,
+      ),
+    }));
+  };
+
+  const addTeammate = () => {
+    setSubmitError(null);
+    setStepError(null);
+    setFormData((prev) => {
+      if (prev.teamMemberDetails.length >= MAX_TEAM_MEMBERS) return prev;
+      return {
+        ...prev,
+        teamMemberDetails: [...prev.teamMemberDetails, createEmptyTeammate()],
+      };
+    });
+  };
+
+  const removeTeammate = (index: number) => {
+    setSubmitError(null);
+    setStepError(null);
+    setFormData((prev) => {
+      if (prev.teamMemberDetails.length <= 1) return prev;
+      return {
+        ...prev,
+        teamMemberDetails: prev.teamMemberDetails.filter((_, i) => i !== index),
+      };
+    });
+  };
 
   const updateFormData = <K extends keyof RegistrationFormData>(
     field: K,
@@ -239,43 +316,79 @@ const OnboardingForm = () => {
         if (!EMAIL_REGEX.test(formData.email.trim())) {
           return "Please enter a valid email address.";
         }
-        const code = formData.phoneCountryCode.trim() || "+91";
-        if (!/^\+[1-9]\d{0,3}$/.test(code)) {
-          return "Please enter a valid country code (e.g. +91).";
-        }
-        if (!isValidPhoneInput(code, formData.phone)) {
-          return code === "+91"
-            ? "Please enter a valid 10-digit Indian mobile number."
-            : "Please enter a valid international mobile number (6–14 digits).";
-        }
-        if (formData.college.trim().length < 2) {
-          return "Please enter your college or institution name.";
+        if (!isValidIndianPhone(formData.phone)) {
+          return "Please enter a valid 10-digit Indian mobile number (+91).";
         }
         return null;
       }
-      case 1:
+      case 1: {
+        const roll = formData.rollNumber.trim();
+        if (!ROLL_NUMBER_REGEX.test(roll)) {
+          return "Roll / Registration number is required (3–40 characters; letters, digits, - or / only).";
+        }
+        if (!formData.department) {
+          return "Please select your department / branch.";
+        }
+        if (!formData.academicYear) {
+          return "Please select your academic year.";
+        }
         return null;
+      }
       case 2:
         return formData.events.length >= 1
           ? null
           : "Please select at least one UDAAN 2026 or IGNITION 2026 event.";
-      case 3:
-        if (
-          hasTeamApplicableSelection &&
-          formData.participationType === "team" &&
-          formData.teamName.trim().length < 2
-        ) {
+      case 3: {
+        if (!isTeamEntry) return null;
+        if (formData.teamName.trim().length < 2) {
           return "Please enter a team name (at least 2 characters) for team entries.";
         }
+        if (
+          formData.teamMemberDetails.length < 1 ||
+          formData.teamMemberDetails.length > MAX_TEAM_MEMBERS
+        ) {
+          return `Team entries require between 1 and ${MAX_TEAM_MEMBERS} teammates.`;
+        }
+        const participantRoll = formData.rollNumber.trim().toLowerCase();
+        const seenRolls = new Set<string>();
+        for (let i = 0; i < formData.teamMemberDetails.length; i++) {
+          const m = formData.teamMemberDetails[i];
+          if (m.name.trim().length < 2) {
+            return `Teammate ${i + 1}: please enter their full name (at least 2 characters).`;
+          }
+          const mRoll = m.rollNumber.trim();
+          if (!ROLL_NUMBER_REGEX.test(mRoll)) {
+            return `Teammate ${i + 1}: registration number must be 3–40 characters (letters, digits, - or /).`;
+          }
+          const mRollKey = mRoll.toLowerCase();
+          if (participantRoll && mRollKey === participantRoll) {
+            return `Teammate ${i + 1}: registration number cannot match your own roll number.`;
+          }
+          if (seenRolls.has(mRollKey)) {
+            return `Teammate ${i + 1}: duplicate registration number (${mRoll}).`;
+          }
+          seenRolls.add(mRollKey);
+          if (!m.department) {
+            return `Teammate ${i + 1}: please select a branch.`;
+          }
+          if (!m.academicYear) {
+            return `Teammate ${i + 1}: please select an academic year.`;
+          }
+        }
         return null;
+      }
       case 4:
         return formData.notes.length <= 500
           ? null
           : "Notes must be 500 characters or fewer.";
       case 5:
-        return formData.confirmedDetails === true
-          ? null
-          : "Please confirm accuracy and consent before submitting.";
+        if (formData.confirmedDetails !== true) {
+          return "Please confirm that all details are correct and agree to the event rules.";
+        }
+        if (isTeamEntry && formData.teamConfirmed !== true) {
+          return "Please confirm that all team members have agreed to participate and their details are correct.";
+        }
+        return null;
       default:
         return null;
     }
@@ -321,28 +434,26 @@ const OnboardingForm = () => {
           submissionId,
           fullName: formData.fullName.trim(),
           email: formData.email.trim(),
-          phoneCountryCode: formData.phoneCountryCode.trim(),
+          phoneCountryCode: "+91",
           phone: formData.phone.trim(),
-          college: formData.college.trim(),
-          rollNumber: formData.rollNumber.trim() || null,
-          department: formData.department || null,
-          academicYear: formData.academicYear || null,
+          college: FIXED_COLLEGE,
+          rollNumber: formData.rollNumber.trim(),
+          department: formData.department,
+          academicYear: formData.academicYear,
           events: formData.events,
-          participationType: hasTeamApplicableSelection
-            ? formData.participationType
-            : "individual",
-          teamName:
-            hasTeamApplicableSelection &&
-            formData.participationType === "team"
-              ? formData.teamName.trim() || null
-              : null,
-          teamMembers:
-            hasTeamApplicableSelection &&
-            formData.participationType === "team"
-              ? formData.teamMembers.trim() || null
-              : null,
+          participationType: isTeamEntry ? "team" : "individual",
+          teamName: isTeamEntry ? formData.teamName.trim() : null,
+          teamMemberDetails: isTeamEntry
+            ? formData.teamMemberDetails.map((m) => ({
+                name: m.name.trim(),
+                rollNumber: m.rollNumber.trim(),
+                department: m.department,
+                academicYear: m.academicYear,
+              }))
+            : null,
           notes: formData.notes.trim() || null,
           confirmedDetails: formData.confirmedDetails,
+          teamConfirmed: isTeamEntry ? formData.teamConfirmed : false,
           website: formData.website,
         }),
       });
@@ -593,26 +704,19 @@ const OnboardingForm = () => {
                       <motion.div variants={fadeInUp} className="space-y-2">
                         <Label htmlFor="phone">Mobile Number *</Label>
                         <div className="flex gap-2 items-center">
-                          <Input
-                            id="phoneCountryCode"
-                            type="tel"
-                            aria-label="Country code"
-                            autoComplete="tel-country-code"
-                            placeholder="+91"
-                            maxLength={5}
-                            value={formData.phoneCountryCode}
-                            onChange={(e) =>
-                              updateFormData("phoneCountryCode", e.target.value)
-                            }
-                            style={{ width: "5.5rem", flex: "0 0 5.5rem" }}
-                            className="shrink-0 text-center transition-all duration-300 focus:ring-2 focus:ring-primary/20 focus:border-primary"
-                          />
+                          <div
+                            aria-label="Country code +91"
+                            style={{ width: "4.5rem", flex: "0 0 4.5rem" }}
+                            className="shrink-0 h-9 rounded-md border bg-muted/60 px-3 flex items-center justify-center text-sm font-medium text-muted-foreground select-none"
+                          >
+                            +91
+                          </div>
                           <Input
                             id="phone"
                             type="tel"
                             inputMode="numeric"
                             autoComplete="tel-national"
-                            placeholder="10-digit mobile or international number"
+                            placeholder="10-digit Indian mobile number"
                             maxLength={20}
                             required
                             value={formData.phone}
@@ -624,8 +728,7 @@ const OnboardingForm = () => {
                           />
                         </div>
                         <p className="text-xs text-muted-foreground">
-                          Default +91 for India; update country code for
-                          international numbers.
+                          Indian mobile numbers only (+91).
                         </p>
                       </motion.div>
                       <motion.div variants={fadeInUp} className="space-y-2">
@@ -634,14 +737,11 @@ const OnboardingForm = () => {
                         </Label>
                         <Input
                           id="college"
-                          placeholder="e.g. Bhagalpur College of Engineering, Sabour"
-                          maxLength={160}
-                          required
-                          value={formData.college}
-                          onChange={(e) =>
-                            updateFormData("college", e.target.value)
-                          }
-                          className="transition-all duration-300 focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                          value={FIXED_COLLEGE}
+                          readOnly
+                          disabled
+                          aria-readonly="true"
+                          className="bg-muted/60 text-muted-foreground cursor-not-allowed"
                         />
                       </motion.div>
                     </CardContent>
@@ -654,19 +754,19 @@ const OnboardingForm = () => {
                     <CardHeader>
                       <CardTitle>Academic Information</CardTitle>
                       <CardDescription>
-                        Optional academic details to help organizers coordinate
-                        by batch and department
+                        Required academic details for organizer coordination
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
                       <motion.div variants={fadeInUp} className="space-y-2">
                         <Label htmlFor="rollNumber">
-                          Roll / Registration Number (Optional)
+                          Roll / Registration Number *
                         </Label>
                         <Input
                           id="rollNumber"
                           placeholder="e.g. 23101105001"
                           maxLength={40}
+                          required
                           value={formData.rollNumber}
                           onChange={(e) =>
                             updateFormData("rollNumber", e.target.value)
@@ -677,7 +777,7 @@ const OnboardingForm = () => {
 
                       <motion.div variants={fadeInUp} className="space-y-2">
                         <Label htmlFor="department">
-                          Department / Branch (Optional)
+                          Department / Branch *
                         </Label>
                         <Select
                           value={formData.department}
@@ -687,32 +787,24 @@ const OnboardingForm = () => {
                         >
                           <SelectTrigger
                             id="department"
+                            aria-required="true"
                             className="transition-all duration-300 focus:ring-2 focus:ring-primary/20 focus:border-primary"
                           >
                             <SelectValue placeholder="Select department" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="CSE">
-                              Computer Science &amp; Engineering
-                            </SelectItem>
-                            <SelectItem value="ECE">
-                              Electronics &amp; Communication Engineering
-                            </SelectItem>
-                            <SelectItem value="EE">
-                              Electrical Engineering
-                            </SelectItem>
-                            <SelectItem value="ME">
-                              Mechanical Engineering
-                            </SelectItem>
-                            <SelectItem value="CE">Civil Engineering</SelectItem>
-                            <SelectItem value="Other">Other</SelectItem>
+                            {DEPARTMENT_OPTIONS.map((opt) => (
+                              <SelectItem key={opt.value} value={opt.value}>
+                                {opt.label}
+                              </SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
                       </motion.div>
 
                       <motion.div variants={fadeInUp} className="space-y-2">
                         <Label htmlFor="academicYear">
-                          Academic Year (Optional)
+                          Academic Year *
                         </Label>
                         <Select
                           value={formData.academicYear}
@@ -722,18 +814,17 @@ const OnboardingForm = () => {
                         >
                           <SelectTrigger
                             id="academicYear"
+                            aria-required="true"
                             className="transition-all duration-300 focus:ring-2 focus:ring-primary/20 focus:border-primary"
                           >
                             <SelectValue placeholder="Select academic year" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="1st Year">1st Year</SelectItem>
-                            <SelectItem value="2nd Year">2nd Year</SelectItem>
-                            <SelectItem value="3rd Year">3rd Year</SelectItem>
-                            <SelectItem value="4th Year">4th Year</SelectItem>
-                            <SelectItem value="PG / Other">
-                              PG / Other
-                            </SelectItem>
+                            {YEAR_OPTIONS.map((yr) => (
+                              <SelectItem key={yr} value={yr}>
+                                {yr}
+                              </SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
                       </motion.div>
@@ -939,24 +1030,131 @@ const OnboardingForm = () => {
                               </motion.div>
                               <motion.div
                                 variants={fadeInUp}
-                                className="space-y-2"
+                                className="space-y-3"
                               >
-                                <Label htmlFor="teamMembers">
-                                  Teammate Details (Optional)
-                                </Label>
-                                <Textarea
-                                  id="teamMembers"
-                                  placeholder="List teammate names or roll numbers if known"
-                                  maxLength={500}
-                                  value={formData.teamMembers}
-                                  onChange={(e) =>
-                                    updateFormData(
-                                      "teamMembers",
-                                      e.target.value,
-                                    )
-                                  }
-                                  className="min-h-[80px] transition-all duration-300 focus:ring-2 focus:ring-primary/20 focus:border-primary"
-                                />
+                                <div className="flex items-center justify-between gap-2">
+                                  <Label>Team Members *</Label>
+                                  <span className="text-xs text-muted-foreground">
+                                    {formData.teamMemberDetails.length}/{MAX_TEAM_MEMBERS}
+                                  </span>
+                                </div>
+                                <div className="space-y-3">
+                                  {formData.teamMemberDetails.map((member, idx) => (
+                                    <div
+                                      key={idx}
+                                      className="rounded-xl border bg-muted/20 p-3 space-y-3"
+                                    >
+                                      <div className="flex items-center justify-between gap-2">
+                                        <span className="text-xs font-medium text-muted-foreground">
+                                          Teammate {idx + 1}
+                                        </span>
+                                        <Button
+                                          type="button"
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={() => removeTeammate(idx)}
+                                          disabled={formData.teamMemberDetails.length <= 1}
+                                          aria-label={`Remove teammate ${idx + 1}`}
+                                          className="h-8 px-2 text-muted-foreground hover:text-destructive"
+                                        >
+                                          <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                      </div>
+                                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                        <div className="space-y-1.5">
+                                          <Label htmlFor={`member-name-${idx}`}>
+                                            Full Name *
+                                          </Label>
+                                          <Input
+                                            id={`member-name-${idx}`}
+                                            placeholder="Teammate full name"
+                                            maxLength={120}
+                                            required
+                                            value={member.name}
+                                            onChange={(e) =>
+                                              updateTeammate(idx, "name", e.target.value)
+                                            }
+                                          />
+                                        </div>
+                                        <div className="space-y-1.5">
+                                          <Label htmlFor={`member-roll-${idx}`}>
+                                            Registration Number *
+                                          </Label>
+                                          <Input
+                                            id={`member-roll-${idx}`}
+                                            placeholder="e.g. 23101105002"
+                                            maxLength={40}
+                                            required
+                                            value={member.rollNumber}
+                                            onChange={(e) =>
+                                              updateTeammate(idx, "rollNumber", e.target.value)
+                                            }
+                                          />
+                                        </div>
+                                        <div className="space-y-1.5">
+                                          <Label htmlFor={`member-dept-${idx}`}>
+                                            Branch *
+                                          </Label>
+                                          <Select
+                                            value={member.department}
+                                            onValueChange={(value) =>
+                                              updateTeammate(idx, "department", value)
+                                            }
+                                          >
+                                            <SelectTrigger
+                                              id={`member-dept-${idx}`}
+                                              aria-required="true"
+                                            >
+                                              <SelectValue placeholder="Select branch" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                              {DEPARTMENT_OPTIONS.map((opt) => (
+                                                <SelectItem key={opt.value} value={opt.value}>
+                                                  {opt.value}
+                                                </SelectItem>
+                                              ))}
+                                            </SelectContent>
+                                          </Select>
+                                        </div>
+                                        <div className="space-y-1.5">
+                                          <Label htmlFor={`member-year-${idx}`}>
+                                            Year *
+                                          </Label>
+                                          <Select
+                                            value={member.academicYear}
+                                            onValueChange={(value) =>
+                                              updateTeammate(idx, "academicYear", value)
+                                            }
+                                          >
+                                            <SelectTrigger
+                                              id={`member-year-${idx}`}
+                                              aria-required="true"
+                                            >
+                                              <SelectValue placeholder="Select year" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                              {YEAR_OPTIONS.map((yr) => (
+                                                <SelectItem key={yr} value={yr}>
+                                                  {yr}
+                                                </SelectItem>
+                                              ))}
+                                            </SelectContent>
+                                          </Select>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={addTeammate}
+                                  disabled={formData.teamMemberDetails.length >= MAX_TEAM_MEMBERS}
+                                  className="w-full sm:w-auto rounded-xl"
+                                >
+                                  <Plus className="h-4 w-4 mr-1" /> Add teammate
+                                </Button>
                               </motion.div>
                             </>
                           )}
@@ -1034,33 +1232,31 @@ const OnboardingForm = () => {
                         <div className="flex justify-between gap-4">
                           <span className="text-muted-foreground">Mobile</span>
                           <span className="font-medium text-right">
-                            {formData.phoneCountryCode} {formData.phone}
+                            +91 {normalizePhoneDisplay(formData.phone)}
                           </span>
                         </div>
                         <div className="flex justify-between gap-4">
                           <span className="text-muted-foreground">College</span>
                           <span className="font-medium text-right">
-                            {formData.college}
+                            {FIXED_COLLEGE}
                           </span>
                         </div>
-                        {(formData.rollNumber ||
-                          formData.department ||
-                          formData.academicYear) && (
-                          <div className="flex justify-between gap-4">
-                            <span className="text-muted-foreground">
-                              Academic
-                            </span>
-                            <span className="font-medium text-right">
-                              {[
-                                formData.rollNumber,
-                                formData.department,
-                                formData.academicYear,
-                              ]
-                                .filter(Boolean)
-                                .join(" · ")}
-                            </span>
-                          </div>
-                        )}
+                        <div className="flex justify-between gap-4">
+                          <span className="text-muted-foreground">
+                            Roll No.
+                          </span>
+                          <span className="font-medium text-right">
+                            {formData.rollNumber.trim()}
+                          </span>
+                        </div>
+                        <div className="flex justify-between gap-4">
+                          <span className="text-muted-foreground">
+                            Branch &amp; Year
+                          </span>
+                          <span className="font-medium text-right">
+                            {formData.department} · {formData.academicYear}
+                          </span>
+                        </div>
                         <div className="flex justify-between gap-4">
                           <span className="text-muted-foreground">Events</span>
                           <span className="font-medium text-right">
@@ -1074,11 +1270,30 @@ const OnboardingForm = () => {
                             </span>
                             <span className="font-medium text-right capitalize">
                               {formData.participationType}
-                              {formData.participationType === "team" &&
-                              formData.teamName
+                              {isTeamEntry && formData.teamName
                                 ? ` (${formData.teamName})`
                                 : ""}
                             </span>
+                          </div>
+                        )}
+                        {isTeamEntry && (
+                          <div className="pt-1 border-t space-y-1.5">
+                            <span className="text-muted-foreground block">
+                              Team Members ({formData.teamMemberDetails.length})
+                            </span>
+                            <ul className="space-y-1 text-xs">
+                              {formData.teamMemberDetails.map((m, idx) => (
+                                <li
+                                  key={idx}
+                                  className="flex flex-wrap justify-between gap-2 rounded-md bg-background/60 px-2.5 py-1.5"
+                                >
+                                  <span className="font-medium">{m.name.trim()}</span>
+                                  <span className="text-muted-foreground">
+                                    {m.rollNumber.trim()} · {m.department} · {m.academicYear}
+                                  </span>
+                                </li>
+                              ))}
+                            </ul>
                           </div>
                         )}
                         {formData.notes.trim() && (
@@ -1103,7 +1318,7 @@ const OnboardingForm = () => {
 
                       <motion.div
                         variants={fadeInUp}
-                        className="flex items-start space-x-2 rounded-md border p-3 cursor-pointer hover:bg-accent/50 transition-colors"
+                        className="flex items-start space-x-3 rounded-xl border p-3.5 min-h-[44px] cursor-pointer hover:bg-accent/50 transition-colors focus-within:ring-2 focus-within:ring-primary"
                         onClick={() =>
                           updateFormData(
                             "confirmedDetails",
@@ -1114,22 +1329,54 @@ const OnboardingForm = () => {
                         <Checkbox
                           id="confirmedDetails"
                           checked={formData.confirmedDetails}
+                          aria-required="true"
                           onCheckedChange={(checked) =>
                             updateFormData("confirmedDetails", checked === true)
                           }
                           onClick={(e) => e.stopPropagation()}
-                          className="mt-0.5"
+                          className="mt-0.5 h-5 w-5"
                         />
                         <Label
                           htmlFor="confirmedDetails"
-                          className="cursor-pointer leading-snug"
+                          className="cursor-pointer leading-snug text-sm"
                           onClick={(e) => e.stopPropagation()}
                         >
-                          I confirm that the above details are accurate and
-                          consent to their use for UDAAN 2026 event
-                          registration. *
+                          I confirm all the details above are correct and I
+                          agree to the event rules. *
                         </Label>
                       </motion.div>
+
+                      {isTeamEntry && (
+                        <motion.div
+                          variants={fadeInUp}
+                          className="flex items-start space-x-3 rounded-xl border p-3.5 min-h-[44px] cursor-pointer hover:bg-accent/50 transition-colors focus-within:ring-2 focus-within:ring-primary"
+                          onClick={() =>
+                            updateFormData(
+                              "teamConfirmed",
+                              !formData.teamConfirmed,
+                            )
+                          }
+                        >
+                          <Checkbox
+                            id="teamConfirmed"
+                            checked={formData.teamConfirmed}
+                            aria-required="true"
+                            onCheckedChange={(checked) =>
+                              updateFormData("teamConfirmed", checked === true)
+                            }
+                            onClick={(e) => e.stopPropagation()}
+                            className="mt-0.5 h-5 w-5"
+                          />
+                          <Label
+                            htmlFor="teamConfirmed"
+                            className="cursor-pointer leading-snug text-sm"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            I confirm all team members have agreed to
+                            participate and their details are correct. *
+                          </Label>
+                        </motion.div>
+                      )}
 
                       {submitError && (
                         <div
@@ -1179,7 +1426,12 @@ const OnboardingForm = () => {
               >
                 <Button
                   type="submit"
-                  disabled={isSubmitting}
+                  disabled={
+                    isSubmitting ||
+                    (currentStep === steps.length - 1 &&
+                      (!formData.confirmedDetails ||
+                        (isTeamEntry && !formData.teamConfirmed)))
+                  }
                   className={cn(
                     "flex items-center gap-1 transition-all duration-300 rounded-2xl",
                   )}
