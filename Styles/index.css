@@ -260,7 +260,8 @@ main {
   margin-top: -14rem;
 }
 
-.text>img {
+.text>img,
+.text>h1>img {
   width: 84%;
   height: auto;
 }

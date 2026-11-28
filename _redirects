@@ -1,0 +1,19 @@
+# Clean URL canonicalization (.html -> clean URL)
+/index.html / 301
+/Templates/ignition.html /Templates/ignition 301
+/Templates/gallery.html /Templates/gallery 301
+/Templates/registration.html /Templates/registration 301
+/Templates/director.html /Templates/director 301
+/Templates/archive.html /Templates/archive 301
+/Templates/developers.html /Templates/developers 301
+/Templates/torchbearers.html /Templates/torchbearers 301
+
+# Friendly short aliases
+/ignition /Templates/ignition 301
+/gallery /Templates/gallery 301
+/register /Templates/registration 301
+/registration /Templates/registration 301
+/director /Templates/director 301
+/archive /Templates/archive 301
+/developers /Templates/developers 301
+/torchbearers /Templates/torchbearers 301

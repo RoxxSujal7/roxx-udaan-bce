@@ -3,7 +3,34 @@ Allow: /
 Allow: /Assets/
 Allow: /Scripts/
 Allow: /Styles/
+Disallow: /api/
+Disallow: /Templates/admin
 Disallow: /src/
 Disallow: /components/
 Disallow: /lib/
 Disallow: /node_modules/
+Disallow: /tests/
+Disallow: /supabase/
+
+# AI search & answer engine crawlers (allowed for discoverability)
+User-agent: GPTBot
+Allow: /
+Disallow: /api/
+Disallow: /Templates/admin
+
+User-agent: ClaudeBot
+Allow: /
+Disallow: /api/
+Disallow: /Templates/admin
+
+User-agent: PerplexityBot
+Allow: /
+Disallow: /api/
+Disallow: /Templates/admin
+
+User-agent: Google-Extended
+Allow: /
+Disallow: /api/
+Disallow: /Templates/admin
+
+Sitemap: https://roxx-udaan-bce.pages.dev/sitemap.xml
