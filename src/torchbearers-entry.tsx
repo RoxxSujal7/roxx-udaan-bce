@@ -74,7 +74,7 @@ function TorchbearersApp() {
                     closeLabel={`Close ${folder.year}`}
                     tint="#ee5622"
                     background="#0e1014"
-                    height="64svh"
+                    height="85svh"
                     defaultOpen={isOpen}
                     onOpenChange={(nextOpen) => handleOpenChange(folder.year, nextOpen)}
                   />
