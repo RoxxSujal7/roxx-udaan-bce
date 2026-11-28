@@ -117,6 +117,9 @@ var ALLOWED_YEARS = /* @__PURE__ */ new Set([
   "4th Year",
   "PG / Other"
 ]);
+var FIXED_COLLEGE = "Bhagalpur College of Engineering";
+var ROLL_NUMBER_REGEX = /^[A-Za-z0-9/-]{3,40}$/;
+var MAX_TEAM_MEMBERS = 15;
 var MAX_BODY_BYTES = 16 * 1024;
 var UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 var EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
@@ -135,43 +138,23 @@ function cleanOptionalText(value, maxLen) {
   if (!trimmed) return null;
   return trimmed.slice(0, maxLen);
 }
-function normalizeAndValidatePhone(rawCountryCode, rawPhone) {
+function normalizeAndValidatePhone(_rawCountryCode, rawPhone) {
   if (typeof rawPhone !== "string") {
     return { ok: false, error: "Mobile number is required." };
   }
-  const code = typeof rawCountryCode === "string" && rawCountryCode.trim() ? rawCountryCode.trim() : "+91";
-  if (!/^\+[1-9]\d{0,3}$/.test(code)) {
-    return { ok: false, error: "Please enter a valid country code (e.g. +91)." };
-  }
   let digits = rawPhone.replace(/\D/g, "");
-  if (code === "+91") {
-    if (digits.length === 11 && digits.startsWith("0")) {
-      digits = digits.slice(1);
-    } else if (digits.length === 12 && digits.startsWith("91")) {
-      digits = digits.slice(2);
-    }
-    if (!/^[6-9]\d{9}$/.test(digits)) {
-      return {
-        ok: false,
-        error: "Please enter a valid 10-digit Indian mobile number."
-      };
-    }
-    return { ok: true, normalized: `+91${digits}` };
+  if (digits.length === 11 && digits.startsWith("0")) {
+    digits = digits.slice(1);
+  } else if (digits.length === 12 && digits.startsWith("91")) {
+    digits = digits.slice(2);
   }
-  if (digits.length < 6 || digits.length > 14) {
+  if (!/^[6-9]\d{9}$/.test(digits)) {
     return {
       ok: false,
-      error: "Please enter a valid international phone number."
+      error: "Please enter a valid 10-digit Indian mobile number (+91)."
     };
   }
-  const e164 = `${code}${digits}`;
-  if (!/^\+[1-9]\d{7,14}$/.test(e164)) {
-    return {
-      ok: false,
-      error: "Please enter a valid international phone number."
-    };
-  }
-  return { ok: true, normalized: e164 };
+  return { ok: true, normalized: `+91${digits}` };
 }
 async function onRequestPost(context) {
   const { request, env } = context;
@@ -230,25 +213,28 @@ async function onRequestPost(context) {
   if (!phoneResult.ok) {
     return jsonResponse({ ok: false, error: phoneResult.error }, 400);
   }
-  const college = typeof body.college === "string" ? body.college.trim() : "";
-  if (college.length < 2 || college.length > 160) {
+  const college = FIXED_COLLEGE;
+  const rollNumber = typeof body.rollNumber === "string" ? body.rollNumber.trim() : "";
+  if (!ROLL_NUMBER_REGEX.test(rollNumber)) {
     return jsonResponse(
       {
         ok: false,
-        error: "College or institution must be between 2 and 160 characters."
+        error: "Roll / Registration number is required (3\u201340 chars, letters, digits, - or /)."
       },
       400
     );
   }
-  const rollNumber = cleanOptionalText(body.rollNumber, 40);
-  const department = cleanOptionalText(body.department, 40);
-  if (department && !ALLOWED_DEPARTMENTS.has(department)) {
-    return jsonResponse({ ok: false, error: "Invalid department value." }, 400);
-  }
-  const academicYear = cleanOptionalText(body.academicYear, 30);
-  if (academicYear && !ALLOWED_YEARS.has(academicYear)) {
+  const department = typeof body.department === "string" ? body.department.trim() : "";
+  if (!ALLOWED_DEPARTMENTS.has(department)) {
     return jsonResponse(
-      { ok: false, error: "Invalid academic year value." },
+      { ok: false, error: "Please select a valid department / branch." },
+      400
+    );
+  }
+  const academicYear = typeof body.academicYear === "string" ? body.academicYear.trim() : "";
+  if (!ALLOWED_YEARS.has(academicYear)) {
+    return jsonResponse(
+      { ok: false, error: "Please select a valid academic year." },
       400
     );
   }
@@ -289,11 +275,105 @@ async function onRequestPost(context) {
       400
     );
   }
-  const teamMembers = participationType === "team" ? cleanOptionalText(body.teamMembers, 500) : null;
+  let teamMembers = null;
+  if (participationType === "team") {
+    if (!Array.isArray(body.teamMemberDetails)) {
+      return jsonResponse(
+        { ok: false, error: "Team member details are required for team entries." },
+        400
+      );
+    }
+    if (body.teamMemberDetails.length < 1 || body.teamMemberDetails.length > MAX_TEAM_MEMBERS) {
+      return jsonResponse(
+        {
+          ok: false,
+          error: `Team entries require between 1 and ${MAX_TEAM_MEMBERS} teammates.`
+        },
+        400
+      );
+    }
+    const seenRolls = /* @__PURE__ */ new Set([rollNumber.toLowerCase()]);
+    const formattedMembers = [];
+    for (let i = 0; i < body.teamMemberDetails.length; i++) {
+      const rawMember = body.teamMemberDetails[i];
+      if (!rawMember || typeof rawMember !== "object" || Array.isArray(rawMember)) {
+        return jsonResponse(
+          { ok: false, error: `Teammate ${i + 1}: invalid member entry.` },
+          400
+        );
+      }
+      const m = rawMember;
+      const mName = typeof m.name === "string" ? m.name.trim() : "";
+      if (mName.length < 2 || mName.length > 120) {
+        return jsonResponse(
+          {
+            ok: false,
+            error: `Teammate ${i + 1}: full name must be 2\u2013120 characters.`
+          },
+          400
+        );
+      }
+      const mRoll = typeof m.rollNumber === "string" ? m.rollNumber.trim() : "";
+      if (!ROLL_NUMBER_REGEX.test(mRoll)) {
+        return jsonResponse(
+          {
+            ok: false,
+            error: `Teammate ${i + 1}: registration number must be 3\u201340 chars (letters, digits, - or /).`
+          },
+          400
+        );
+      }
+      const mRollKey = mRoll.toLowerCase();
+      if (mRollKey === rollNumber.toLowerCase()) {
+        return jsonResponse(
+          {
+            ok: false,
+            error: `Teammate ${i + 1}: registration number cannot match your own roll number.`
+          },
+          400
+        );
+      }
+      if (seenRolls.has(mRollKey)) {
+        return jsonResponse(
+          {
+            ok: false,
+            error: `Teammate ${i + 1}: duplicate registration number (${mRoll}).`
+          },
+          400
+        );
+      }
+      seenRolls.add(mRollKey);
+      const mDept = typeof m.department === "string" ? m.department.trim() : "";
+      if (!ALLOWED_DEPARTMENTS.has(mDept)) {
+        return jsonResponse(
+          { ok: false, error: `Teammate ${i + 1}: please select a valid branch.` },
+          400
+        );
+      }
+      const mYear = typeof m.academicYear === "string" ? m.academicYear.trim() : "";
+      if (!ALLOWED_YEARS.has(mYear)) {
+        return jsonResponse(
+          { ok: false, error: `Teammate ${i + 1}: please select a valid year.` },
+          400
+        );
+      }
+      formattedMembers.push(`${mName} \u2014 ${mRoll} \u2014 ${mDept} \u2014 ${mYear}`);
+    }
+    teamMembers = formattedMembers.join("\n");
+  }
   const notes = cleanOptionalText(body.notes, 500);
   if (body.confirmedDetails !== true) {
     return jsonResponse(
-      { ok: false, error: "You must confirm accuracy and consent to submit." },
+      { ok: false, error: "You must confirm accuracy and event rules to submit." },
+      400
+    );
+  }
+  if (participationType === "team" && body.teamConfirmed !== true) {
+    return jsonResponse(
+      {
+        ok: false,
+        error: "You must confirm all team members have agreed to participate and their details are correct."
+      },
       400
     );
   }
