@@ -96,7 +96,7 @@
 <body>
   <div class="loader">
     <div class="video-wrapper">
-      <video src="Assets/loader.mp4" autoplay loop muted playsinline webkit-playsinline="true" preload="auto" disablePictureInPicture id="video" width="100%"></video>
+      <video src="Assets/loader.mp4" poster="Assets/loader-poster.jpg" autoplay loop muted playsinline webkit-playsinline="true" preload="metadata" disablePictureInPicture id="video" width="100%"></video>
       <div class="shadow"></div>
     </div>
 
@@ -255,8 +255,8 @@
       </div>
 
       <div class="text">
-        <img id="bosm" src="./Assets/BOSMText.png" alt="UDAAN" />
-        <img id="bosmr" src="./Assets/RiseText.png" alt="Efforts to Excellence" />
+        <img id="bosm" src="./Assets/BOSMText.png" alt="UDAAN" fetchpriority="high" decoding="async" />
+        <img id="bosmr" src="./Assets/RiseText.png" alt="Efforts to Excellence" fetchpriority="high" decoding="async" />
       </div>
 
       <a class="regist" href="Templates/registration.html" id="phoneRegist">REGISTER</a>
@@ -353,7 +353,7 @@
     <img class="events-bg-phone" src="./Assets/bgAboutPhone.png" alt="" loading="lazy" decoding="async" />
     <h2 class="sec-header">EVENTS</h2>
     <div id="evt-cont">
-      <div id="events-carousel-root" style="width: 100%; position: relative;"></div>
+      <div id="events-carousel-root" style="width: 100%; min-height: 440px; position: relative;"></div>
     </div>
   </section>
 
@@ -484,7 +484,7 @@
 
 
   <!-- LIVE HIDDEN (temporary): restore by uncommenting <div id="live-strip-root"></div> -->
-  <div id="udaan-footer-root"></div>
+  <div id="udaan-footer-root" style="min-height: 360px;"></div>
 </body>
 
 </html>
